@@ -52,6 +52,8 @@ colors=[[1.0, 0.0, 0.0],  [0.0,  1.0,  0.0],  [0.0,  0.0,  1.0],  [1.0, 1.0, 0.0
 from plot_widget import *
 from message_viewer import *
 
+
+# define sorting order of MAVlink attributes (this controls the subtree structure of the message viewer).
 key_attribute_list=('_header.srcSystem',  '_header.srcComponent', '_type',  'name',  'param_id', 'stream_id')
     
 class Update_Thread():
