@@ -52,7 +52,7 @@ colors=[[1.0, 0.0, 0.0],  [0.0,  1.0,  0.0],  [0.0,  0.0,  1.0],  [1.0, 1.0, 0.0
 from plot_widget import *
 from message_viewer import *
 
-
+key_attribute_list=('_header.srcSystem',  '_header.srcComponent', '_type',  'name',  'param_id', 'stream_id')
     
 class Update_Thread():
     def __init__(self, treeViewInstance):
@@ -79,7 +79,7 @@ class Update_Thread():
         if msg_key=='':
           return
        #print "updating tree: ",msg_key
-        msgNode=self._treeViewInstance.rootNode.updateContent( key_attribute_list=('_header.srcSystem',  '_header.srcComponent', '_type',  'name',  'param_id', 'stream_id'),  content=msg)
+        msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
 
         #call plugins
         self.plugin_manager.run_plugins(msg)
