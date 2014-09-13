@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-4.6.dtd">
-<!-- eric4 project file for project mavplot -->
-<!-- Saved: 2014-09-13, 22:53:16 -->
+<!-- eric4 project file for project mavue -->
+<!-- Saved: 2014-09-13, 23:30:26 -->
 <!-- Copyright (C) 2014 ,  -->
 <Project version="4.6">
   <Language>en</Language>
@@ -28,29 +28,11 @@
     <Source>mavue.py</Source>
     <Source>message_store.py</Source>
     <Source>pymavlink/dialects/__init__.py</Source>
-    <Source>pymavlink/dialects/v10/pixhawk.py</Source>
     <Source>pymavlink/dialects/v10/__init__.py</Source>
-    <Source>pymavlink/dialects/v10/matrixpilot.py</Source>
-    <Source>pymavlink/dialects/v10/slugs.py</Source>
     <Source>pymavlink/dialects/v10/auv.py</Source>
-    <Source>pymavlink/dialects/v10/test.py</Source>
-    <Source>pymavlink/dialects/v10/dbgextensions.py</Source>
-    <Source>pymavlink/dialects/v10/ardupilotmega.py</Source>
-    <Source>pymavlink/dialects/v10/ualberta.py</Source>
     <Source>pymavlink/dialects/v10/maveric2.py</Source>
-    <Source>pymavlink/dialects/v10/autoquad.py</Source>
-    <Source>pymavlink/dialects/v10/maveric2b.py</Source>
-    <Source>pymavlink/dialects/v10/sensesoar.py</Source>
     <Source>pymavlink/dialects/v10/common.py</Source>
-    <Source>pymavlink/dialects/v10/minimal.py</Source>
-    <Source>pymavlink/dialects/v09/pixhawk.py</Source>
     <Source>pymavlink/dialects/v09/__init__.py</Source>
-    <Source>pymavlink/dialects/v09/slugs.py</Source>
-    <Source>pymavlink/dialects/v09/test.py</Source>
-    <Source>pymavlink/dialects/v09/ardupilotmega.py</Source>
-    <Source>pymavlink/dialects/v09/ualberta.py</Source>
-    <Source>pymavlink/dialects/v09/common.py</Source>
-    <Source>pymavlink/dialects/v09/minimal.py</Source>
   </Sources>
   <Forms>
   </Forms>

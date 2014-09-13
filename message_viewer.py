@@ -1,3 +1,13 @@
+'''
+MAVUE v0.1 (beta)
+Graphical inspector for MAVLink enabled embedded systems.
+
+Copyright (c) 2009-2014, Felix Schill
+All rights reserved. 
+Refer to the file LICENSE.TXT which should be included in all distributions of this project.
+'''
+
+
 from pyqtgraph.Qt import QtGui, QtCore
 import numpy as np
 import pyqtgraph as pg

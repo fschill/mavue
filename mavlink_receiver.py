@@ -19,7 +19,7 @@ from optparse import OptionParser
 
 class MAVlinkReceiver:
     def __init__(self):
-        parser = OptionParser("mavtester.py [options]")
+        parser = OptionParser("mavue.py [options]")
 
         parser.add_option("--baudrate", dest="baudrate", type='int',
                   help="master port baud rate", default=115200)
