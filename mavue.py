@@ -99,7 +99,7 @@ class MainWindow(QtGui.QMainWindow):
         self.widgetbarLayout=QtGui.QHBoxLayout()
         self.widgetbar.setLayout(self.widgetbarLayout)
         
-        self.serialSelect=gui_elements.PlainComboField(parent=self,  label='Serial port',  choices=['udp:localhost:14550']+[s.device for s in self.serialPorts]+["..."])
+        self.serialSelect=gui_elements.PlainComboField(parent=self,  label='Serial port',  choices=['udp:localhost:14550']+[s.device for s in self.serialPorts],  value=self.updater.mavlinkReceiver.opts.device)
         self.connect(self.serialSelect,  QtCore.SIGNAL("currentIndexChanged(const QString&)"),  self.openConnection)
         
         self.menubarLayout.addWidget(self.serialSelect)

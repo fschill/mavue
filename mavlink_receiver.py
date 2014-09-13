@@ -24,6 +24,7 @@ class MAVlinkReceiver:
         parser.add_option("--baudrate", dest="baudrate", type='int',
                   help="master port baud rate", default=115200)
         parser.add_option("--device", dest="device", default="", help="serial device")
+        parser.add_option("--dialect", dest="dialect", default="common", help="Mavlink dialect")
         parser.add_option("--logfile", dest="logfile_raw", default="", help="output log file")
         parser.add_option("--notimestamps", dest="notimestamps", default="true", help="logfile format")
         parser.add_option("--source-system", dest='SOURCE_SYSTEM', type='int',
@@ -46,11 +47,12 @@ class MAVlinkReceiver:
 
         self.master=None
         # create a mavlink serial instance
-        #try:
-        #    print "Initialising as system ",   opts.SOURCE_SYSTEM,  "on device",  opts.device
-        self.master = mavutil.mavlink_connection(opts.device, baud=opts.baudrate, source_system=opts.SOURCE_SYSTEM,  write=True,  dialect="auv",  notimestamps=opts.notimestamps)
-        #except:
-        #    print "error opening input device."
+        print ""
+        print "Initialising as system ",   opts.SOURCE_SYSTEM,  "on device",  opts.device,  "(baud=",  opts.baudrate,  ")"
+        print "with MAVlink dialect '",  opts.dialect, "'"
+        print ""
+        self.master = mavutil.mavlink_connection(opts.device, baud=opts.baudrate, source_system=opts.SOURCE_SYSTEM,  write=True,  dialect=opts.dialect,  notimestamps=opts.notimestamps)
+        
         #open log file for data logging
         if opts.logfile_raw!="":
             self.master.logfile_raw=open(opts.logfile_raw,  'w',  0)
@@ -67,7 +69,11 @@ class MAVlinkReceiver:
         self.requestAllStreams()
 
     def reopenDevice(self, device):
-        self.master = mavutil.mavlink_connection(device, baud=self.opts.baudrate, source_system=self.opts.SOURCE_SYSTEM,  write=True,  dialect="maveric2",  notimestamps=self.opts.notimestamps)
+        print ""
+        print "Initialising as system ",   self.opts.SOURCE_SYSTEM,  "on device",  self.opts.device,  "(baud=",  self.opts.baudrate,  ")"
+        print "with MAVlink dialect '",  self.opts.dialect, "'"
+        print ""
+        self.master = mavutil.mavlink_connection(device, baud=self.opts.baudrate, source_system=self.opts.SOURCE_SYSTEM,  write=True,  dialect=self.opts.dialect,  notimestamps=self.opts.notimestamps)
 
     def requestStream(self,  stream,  active,  frequency=0):
         if self.master==None:
