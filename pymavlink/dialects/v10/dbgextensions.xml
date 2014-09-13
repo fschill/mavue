@@ -1,0 +1,47 @@
+<?xml version='1.0'?>
+<mavlink>
+     <include>common.xml</include>
+     <enums>
+          <enum name="DATA_TYPES">
+               <description>Content Types for data transmission handshake</description>
+               <entry value="1" name="DATA_TYPE_JPEG_IMAGE"/>
+               <entry value="2" name="DATA_TYPE_RAW_IMAGE"/>
+               <entry value="3" name="DATA_TYPE_KINECT"/>
+          </enum>
+     </enums>
+     <messages>
+          <message id="245" name="RAW_DATA_STREAM_8">
+               <description>Raw data stream (16-bit) or multi-packet arrays</description>
+               <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
+               <field type="uint8_t" name="stream_id">Stream ID</field>
+               <field type="uint8_t" name="packets_per_block">Number of packets per block (0 if continuous stream)</field>
+               <field type="uint8_t" name="packet_id">packet counter</field>
+               <field type="uint8_t" name="sample_count">Number of valid samples in this packet</field>
+               <field type="uint8_t[64]" name="values">raw sample values</field>
+          </message>
+
+          <message id="246" name="RAW_DATA_STREAM_16">
+               <description>Raw data stream (16-bit) or multi-packet arrays</description>
+               <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
+               <field type="uint8_t" name="stream_id">Stream ID</field>
+               <field type="uint8_t" name="packets_per_block">Number of packets per block (0 if continuous stream)</field>
+               <field type="uint8_t" name="packet_id">packet counter</field>
+               <field type="uint8_t" name="sample_count">Number of valid samples in this packet</field>
+               <field type="int16_t[64]" name="values">raw sample values</field>
+          </message>
+          <message id="247" name="RAW_DATA_STREAM_FLOAT">
+               <description>Raw data stream (16-bit) or multi-packet arrays</description>
+               <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
+               <field type="uint8_t" name="stream_id">Stream ID</field>
+               <field type="uint8_t" name="packets_per_block">Number of packets per block (0 if continuous stream)</field>
+               <field type="uint8_t" name="packet_id">packet counter</field>
+               <field type="uint8_t" name="sample_count">Number of valid samples in this packet</field>
+               <field type="float[32]" name="values">raw sample values</field>
+          </message>
+          <message id="248" name="ENTITY_NAME">
+               <description>Additional information on existing messages and commands</description>
+               <field type="uint8_t" name="stream_id">Stream ID</field>
+          </message>
+
+     </messages>
+</mavlink>

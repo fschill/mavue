@@ -1,0 +1,10 @@
+*.DS_Store
+Thumbs.db
+.svn
+*.o
+*.d
+*.tmp
+*.~*
+Debug/*
+*.atsuo
+*.pyc

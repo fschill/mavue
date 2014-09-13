@@ -1,0 +1,102 @@
+<?xml version='1.0'?>
+<mavlink>
+     <include>common.xml</include>
+     
+     <enums>
+          <enum name="MOTOR_CONTROL_MODE">
+               <description>Content Types for data transmission handshake</description>
+               <entry value="0" name="MOTOR_OFF"/>
+               <entry value="1" name="MOTOR_SLEEP"/>
+               <entry value="2" name="MOTOR_RESET"/>
+               <entry value="3" name="MOTOR_AMPLITUDE_CONTROL"/>
+               <entry value="4" name="MOTOR_CURRENT_CONTROL"/>
+               <entry value="5" name="MOTOR_TORQUE_CONTROL"/>
+               <entry value="6" name="MOTOR_VELOCITY_CONTROL"/>
+               <entry value="7" name="MOTOR_POSITION_CONTROL"/>
+               <entry value="8" name="MOTOR_PASSIVE_BRAKE"/>
+               <entry value="9" name="MOTOR_PASSIVE_FREEWHEEL"/>
+               
+          </enum>
+          <enum name="MOTOR_COMMUTATION_MODE">
+               <description>Content Types for data transmission handshake</description>
+               <entry value="0" name="MOTOR_TRAPEZOIDAL_HALL"/>
+               <entry value="1" name="MOTOR_FOC_HALL"/>
+               <entry value="2" name="MOTOR_TRAPEZ_SENSORLESS"/>
+               <entry value="3" name="MOTOR_FOC_SENSORLESS"/>
+               <entry value="4" name="MOTOR_TRAPEZ_SL_AUTO"/>
+               <entry value="5" name="MOTOR_FOC_SL_AUTO"/>
+          </enum>
+          <enum name="MOTOR_ERROR_STATE">
+               <description>Status flags of a motor controller (8 bits)</description>
+               <entry value=  "1" name="MOTOR_RUNNING"          ><description>Motor running nominally</description> </entry>
+               <entry value=  "2" name="MOTOR_CURRENT_LIMITED"  ><description>Current limiter active</description>  </entry>
+               <entry value=  "4" name="MOTOR_OVERLOAD"         ><description>Overload condition</description>      </entry>
+               <entry value=  "8" name="MOTOR_STALLED"          ><description>Motor stalled</description>           </entry>
+               <entry value= "16" name="MOTOR_SYNC_LOSS"        ><description>Commutation lost synchronisation</description>   </entry>
+               <entry value= "32" name="MOTOR_SHORT_CIRCUIT"    ><description>Short circuit in output amplifier</description>  </entry>
+               <entry value= "64" name="MOTOR_WATCHDOG_TIMEOUT" ><description>Motor has not received commands within timeout period</description></entry>
+               <entry value="128" name="MOTOR_REACHED_SETPOINT" ><description>Motor is tracking the given setpoint</description></entry>
+          </enum>
+     </enums>
+     <messages>
+          <message id="150" name="MOTOR_COMMAND">
+               <description>Command to configure and control motor controllers</description>
+               <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
+                <field type="uint8_t" name="target_system">System ID</field>
+               <field type="uint8_t" name="target_component">Component ID</field>
+               <field type="uint8_t" name="control_mode">set the motor control mode (MOTOR_CONTROL_MODE enum)</field>
+                <field type="float" name="setpoint">Target setpoint. Amplitude: -1.0 - 1.0, Current: Ampere, Torque: Nm, Velocity: RPM, Position: Degrees/mm</field>
+                <field type="float" name="current_limit">Current limit in Ampere</field>
+          </message>
+
+          <message id="151" name="MOTOR_STATE">
+               <description>Command to configure and control motor controllers</description>
+               <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
+               <field type="uint8_t" name="control_mode">report motor control mode (MOTOR_CONTROL_MODE enum)</field> 
+               <field type="uint8_t" name="commutation_mode">motor commutation mode</field> 
+               <field type="uint8_t" name="motor_error_state">motor state flags: </field> 
+               <field type="uint16_t" name="update_rate">update frequency of commutation controller</field>
+               <field type="float" name="speed">motor speed in rpm (sign indicates direction)</field>
+               <field type="float" name="supply_voltage">supply voltage in Volt</field>
+               <field type="float" name="current">motor current in ampere</field>
+               <field type="float" name="power">electrical power delivered by motor controller</field>
+               <field type="float" name="torque">motor torque estimate</field>
+               <field type="float" name="position">actuator position in degrees or millimeters</field>
+               <field type="float" name="sensor_raw_speed">raw speed measured by hall sensors</field>
+               <field type="float" name="I_d">field-generating current component (estimated)</field>
+               <field type="float" name="I_q">torque-generating current component (estimated)</field>
+          </message>
+          <message id="245" name="RAW_DATA_STREAM_8">
+               <description>Raw data stream (16-bit) or multi-packet arrays</description>
+               <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
+               <field type="uint8_t" name="stream_id">Stream ID</field>
+               <field type="uint8_t" name="packets_per_block">Number of packets per block (0 if continuous stream)</field>
+               <field type="uint8_t" name="packet_id">packet counter</field>
+               <field type="uint8_t" name="sample_count">Number of valid samples in this packet</field>
+               <field type="uint8_t[64]" name="values">raw sample values</field>
+          </message>
+
+          <message id="246" name="RAW_DATA_STREAM_16">
+               <description>Raw data stream (16-bit) or multi-packet arrays</description>
+               <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
+               <field type="uint8_t" name="stream_id">Stream ID</field>
+               <field type="uint8_t" name="packets_per_block">Number of packets per block (0 if continuous stream)</field>
+               <field type="uint8_t" name="packet_id">packet counter</field>
+               <field type="uint8_t" name="sample_count">Number of valid samples in this packet</field>
+               <field type="int16_t[64]" name="values">raw sample values</field>
+          </message>
+          <message id="247" name="RAW_DATA_STREAM_FLOAT">
+               <description>Raw data stream (16-bit) or multi-packet arrays</description>
+               <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
+               <field type="uint8_t" name="stream_id">Stream ID</field>
+               <field type="uint8_t" name="packets_per_block">Number of packets per block (0 if continuous stream)</field>
+               <field type="uint8_t" name="packet_id">packet counter</field>
+               <field type="uint8_t" name="sample_count">Number of valid samples in this packet</field>
+               <field type="float[32]" name="values">raw sample values</field>
+          </message>
+          <message id="248" name="ENTITY_NAME">
+               <description>Additional information on existing messages and commands</description>
+               <field type="uint8_t" name="stream_id">Stream ID</field>
+          </message>
+     </messages>
+</mavlink>
