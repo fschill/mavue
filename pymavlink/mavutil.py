@@ -11,7 +11,7 @@ import socket, math, struct, time, os, fnmatch, array, sys, errno
 # adding these extra imports allows pymavlink to be used directly with pyinstaller
 # without having complex spec files
 import json
-from pymavlink.dialects.v10 import ardupilotmega
+from pymavlink.dialects.v10 import common
 
 # these imports allow for mavgraph and mavlogdump to use maths expressions more easily
 from math import *
