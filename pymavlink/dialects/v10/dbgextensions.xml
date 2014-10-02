@@ -4,27 +4,29 @@
      <enums>
           <enum name="BOOTLOADER_COMMANDS">
                <description>Bootloader/debug command definitions</description>
-               <entry value="1" name="BOOT_INITIATE_SESSION"><description></description></entry>
-               <entry value="2" name="BOOT_RESET"><description></description></entry>
-               <entry value="3" name="BOOT_STOP_CURRENT_TRANSFER"><description></description></entry>
-               <entry value="4" name="BOOT_GET_PROCESSOR_INFORMATION"><description></description></entry>
-               <entry value="5" name="BOOT_PROCESSOR_MODEL"><description></description></entry>
-               <entry value="6" name="BOOT_ARCHITECTURE"><description></description></entry>
-               <entry value="7" name="BOOT_PAGE_SIZE"><description></description></entry>
-               <entry value="8" name="BOOT_PROCESSOR_ID"><description></description></entry>
-               <entry value="9" name="BOOT_TARGET_VOLTAGE"><description></description></entry>
-               <entry value="10" name="BOOT_USERPAGE_ADDRESS"><description></description></entry>
+               <entry value="1" name="BOOT_INITIATE_SESSION"><description>Activates bootloader after power-up</description></entry>
+               <entry value="2" name="BOOT_RESET"><description>Reset microcontroller</description></entry>
+               <entry value="3" name="BOOT_STATE_RESET"><description>Bootloader returns to default state</description></entry>
+               <entry value="4" name="BOOT_GET_PROCESSOR_INFORMATION"><description>Request all processor information. Response: multiple messages with information (see following defintions)</description></entry>
+               <entry value="5" name="BOOT_PROCESSOR_MODEL"><description>Response: BOOTLOADER_CMD message with 32bit processor model identifier. Optional: BOOTLOADER_DATA with description string</description></entry>
+               <entry value="6" name="BOOT_ARCHITECTURE"><description>Response: BOOTLOADER_DATA with Architecture description string</description></entry>
+               <entry value="7" name="BOOT_PAGE_SIZE"><description>Response: BOOTLOADER_CMD message with  param_length = processor page size in bytes</description></entry>
+               <entry value="8" name="BOOT_PROCESSOR_ID"><description>Response: BOOTLOADER_DATA with full unique processor ID (120 bits for AVR32)</description></entry>
+               <entry value="9" name="BOOT_TARGET_VOLTAGE"><description>Response: BOOTLOADER_CMD message with  param_address = voltage in millivolts (optional)</description></entry>
+               <entry value="10" name="BOOT_FLASH_SIZE"><description>Response: BOOTLOADER_CMD message with  param_length = flash memory size in bytes</description></entry>
+               <entry value="11" name="BOOT_RAM_SIZE"><description>Response: BOOTLOADER_CMD message with  param_length = ram memory size in bytes</description></entry>
+               <entry value="12" name="BOOT_USERPAGE_ADDRESS"><description>Response: BOOTLOADER_CMD message with  param_address = address of user page</description></entry>
 
-               <entry value="16" name="BOOT_START_APPLICATION"><description></description></entry>
-               <entry value="17" name="BOOT_START_AT_ADDRESS"><description></description></entry>
-               <entry value="18" name="BOOT_ERASE_FLASH"><description></description></entry>
-               <entry value="19" name="BOOT_ERASE_USERPAGE"><description></description></entry>
-               <entry value="20" name="BOOT_START_REPROGRAM"><description></description></entry>
-               <entry value="21" name="BOOT_STOP_REPROGRAM"><description></description></entry>
-               <entry value="22" name="BOOT_WRITE_TO_BUFFER"><description></description></entry>
-               <entry value="23" name="BOOT_WRITE_BUFFER_TO_FLASH"><description></description></entry>
-               <entry value="24" name="BOOT_WRITE_BUFFER_TO_USERPAGE"><description></description></entry>
-               <entry value="25" name="BOOT_READ_MEMORY"><description></description></entry>
+               <entry value="16" name="BOOT_START_APPLICATION"><description>leaves bootloader and starts user application</description></entry>
+               <entry value="17" name="BOOT_START_AT_ADDRESS"><description>start execution at address in param_address</description></entry>
+               <entry value="18" name="BOOT_ERASE_FLASH"><description>erase flash starting from param_address to param_address+param_length (rounded to pages)</description></entry>
+               <entry value="19" name="BOOT_ERASE_USERPAGE"><description>erase user page or internal eeprom</description></entry>
+               <entry value="20" name="BOOT_START_REPROGRAM"><description>intitiates flash upload session</description></entry>
+               <entry value="21" name="BOOT_END_REPROGRAM"><description>ends flash upload session</description></entry>
+               <entry value="22" name="BOOT_WRITE_TO_BUFFER"><description>BOOTLOADER_DATA: write data to internal page buffer</description></entry>
+               <entry value="23" name="BOOT_WRITE_BUFFER_TO_FLASH"><description>BOOTLOADER_CMD: write page buffer contents to flash page at given address</description></entry>
+               <entry value="24" name="BOOT_WRITE_BUFFER_TO_USERPAGE"><description>BOOTLOADER_CMD: write page buffer contents to user page or internal eeprom at relative address</description></entry>
+               <entry value="25" name="BOOT_READ_MEMORY"><description>Request data at given memory address </description></entry>
                <entry value="26" name="BOOT_WRITE_FUSES"><description></description></entry>
                <entry value="27" name="BOOT_READ_FUSES"><description></description></entry>
 
