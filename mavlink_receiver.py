@@ -24,7 +24,7 @@ class MAVlinkReceiver:
         parser.add_option("--baudrate", dest="baudrate", type='int',
                   help="master port baud rate", default=115200)
         parser.add_option("--device", dest="device", default="", help="serial device")
-        parser.add_option("--dialect", dest="dialect", default="auv", help="Mavlink dialect")
+        parser.add_option("--dialect", dest="dialect", default="dbgextensions", help="Mavlink dialect")
         parser.add_option("--logfile", dest="logfile_raw", default="", help="output log file")
         parser.add_option("--notimestamps", dest="notimestamps", default="true", help="logfile format")
         parser.add_option("--source-system", dest='SOURCE_SYSTEM', type='int',
@@ -98,8 +98,7 @@ class MAVlinkReceiver:
         print "Requesting all parameters",  self.master.target_system
         self.master.param_fetch_all()
 
-
-
+        
     def wait_message(self):
         if self.master==None:
             return "", None

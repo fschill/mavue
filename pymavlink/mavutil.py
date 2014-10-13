@@ -94,7 +94,7 @@ def set_dialect(dialect):
 
 # allow for a MAVLINK_DIALECT environment variable
 if not 'MAVLINK_DIALECT' in os.environ:
-    os.environ['MAVLINK_DIALECT'] = 'ardupilotmega'
+    os.environ['MAVLINK_DIALECT'] = 'common'
 set_dialect(os.environ['MAVLINK_DIALECT'])
 
 class mavfile(object):

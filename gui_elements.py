@@ -9,7 +9,19 @@ Refer to the file LICENSE.TXT which should be included in all distributions of t
 
 
 from PyQt4.QtCore import *
-from PyQt4 import QtGui
+from PyQt4 import QtGui,  QtCore
+
+class HorizontalBar(QtGui.QWidget):
+    def __init__(self,  parent=None):
+        QtGui.QWidget.__init__( self, parent=parent)
+        self.items=[]
+        self.layout=QtGui.QHBoxLayout()
+        self.setLayout(self.layout)
+        
+    def add(self,  widget,  signal,  action):
+        self.layout.addWidget(widget)
+        self.items.append(widget)
+        self.connect(widget,   QtCore.SIGNAL(signal),  action)
 
 class PlainComboField(QtGui.QComboBox):
     def __init__(self, parent=None,  label="", value=None,  choices=None):

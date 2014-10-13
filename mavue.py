@@ -51,10 +51,11 @@ colors=[[1.0, 0.0, 0.0],  [0.0,  1.0,  0.0],  [0.0,  0.0,  1.0],  [1.0, 1.0, 0.0
 
 from plot_widget import *
 from message_viewer import *
+import bootloader
 
 
 # define sorting order of MAVlink attributes (this controls the subtree structure of the message viewer).
-key_attribute_list=('_header.srcSystem',  '_header.srcComponent', '_type',  'name',  'param_id', 'stream_id')
+key_attribute_list=('_header.srcSystem',  '_header.srcComponent', '_type',  'name',  'param_id', 'stream_id',  'command')
     
 class Update_Thread():
     def __init__(self, treeViewInstance):
@@ -108,7 +109,10 @@ class Update_Thread():
         self.mavlinkReceiver.reopenDevice(device)
         self.t.start()
 
+        
+
 class MainWindow(QtGui.QMainWindow):
+
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
         
@@ -144,6 +148,10 @@ class MainWindow(QtGui.QMainWindow):
         self.reloadPluginsButton=QtGui.QPushButton("reload plugins")
         self.menubarLayout.addWidget(self.reloadPluginsButton)
         self.connect(self.reloadPluginsButton,  QtCore.SIGNAL("clicked()"),  self.updater.reloadPlugins)
+
+        self.bootloaderButton=QtGui.QPushButton("Bootloader")
+        self.menubarLayout.addWidget(self.bootloaderButton)
+        self.connect(self.bootloaderButton,  QtCore.SIGNAL("clicked()"),  self.openBootloader)
         
         self.l.addWidget(self.menubar, 0, 0)
         self.l.addWidget(self.messageTreeView.treeView,  1,  0)  
@@ -177,6 +185,10 @@ class MainWindow(QtGui.QMainWindow):
         slider=ParamSlider(title="slider",  parent=self)
         slider.show()
 
+    def openBootloader(self):
+
+        self.bootloaderWindow=bootloader.Bootloader(self,  self.updater.mavlinkReceiver)
+        self.bootloaderWindow.show()
 
     def openConnection(self,  index):
         try:
