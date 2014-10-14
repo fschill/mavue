@@ -21,7 +21,7 @@ class ReturnMessage(mavutil.mavlink.MAVLink_message):
     def __init__(self,  *kwargs):
         mavutil.mavlink.MAVLink_message.__init__(self,  *kwargs)
     
-class plugin:
+class Plugin:
     def filter(self,  message):
         return false
              
@@ -84,7 +84,7 @@ sqrt_2_pi=sqrt(2*pi)
 def gauss(mean,  sigma,  x):
     return 1/(sigma*sqrt_2_pi) * exp(-0.5*((x-mean)/sigma)**2)
 
-class amplitude_particle_filter(plugin):
+class amplitude_particle_filter(Plugin):
     def __init__(self):
         self.number_of_particles=100
         self.max_distance=5.0
@@ -206,7 +206,7 @@ class amplitude_particle_filter(plugin):
         
         
         
-class distance_particle_filter(plugin):
+class distance_particle_filter(Plugin):
     def __init__(self):
         self.number_of_particles=100
         self.max_distance=5.0
@@ -368,7 +368,7 @@ class KalmanFilterLinear:
     # eye(n) = nxn identity matrix.
     self.current_prob_estimate = (numpy.eye(size)-kalman_gain*self.H)*predicted_prob_estimate
 
-class distance_kalman_filter(plugin):
+class distance_kalman_filter(Plugin):
     def __init__(self):
         self.number_of_particles=100
         self.max_distance=5.0

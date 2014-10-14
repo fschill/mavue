@@ -68,7 +68,7 @@ class Update_Thread():
         self.t.timeout.connect(self.update)
         self.t.start(2)
         self.plugin_manager=plugins.plugin_manager(self.plugin_callback)
-
+        
     def plugin_callback(self,  msg):
         if msg!=None:
             self._treeViewInstance.rootNode.updateContent(msg)
@@ -188,6 +188,8 @@ class MainWindow(QtGui.QMainWindow):
     def openBootloader(self):
 
         self.bootloaderWindow=bootloader.Bootloader(self,  self.updater.mavlinkReceiver)
+        self.updater.plugin_manager.active_plugins.append(self.bootloaderWindow)
+
         self.bootloaderWindow.show()
 
     def openConnection(self,  index):

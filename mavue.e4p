@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-4.6.dtd">
 <!-- eric4 project file for project mavue -->
-<!-- Saved: 2014-10-13, 18:59:26 -->
+<!-- Saved: 2014-10-14, 14:20:47 -->
 <!-- Copyright (C) 2014 ,  -->
 <Project version="4.6">
   <Language>en</Language>
@@ -34,6 +34,7 @@
     <Source>pymavlink/dialects/v10/dbgextensions.py</Source>
     <Source>pymavlink/dialects/v10/common.py</Source>
     <Source>pymavlink/dialects/v10/auv.py</Source>
+    <Source>abstractparameters.py</Source>
   </Sources>
   <Forms>
   </Forms>
