@@ -81,6 +81,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
             self.hexObject=intelhex.IntelHex(self.hexFile)
             print ("successfully opened "+filename)
             print "%0.2X - %0.2X" %(self.hexObject.minaddr(),  self.hexObject.maxaddr())
+            print self.hexObject.addresses()
 
     def readFlash(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,  self.messageCounter,   mb.BOOT_READ_MEMORY, 0, 0, 0)
