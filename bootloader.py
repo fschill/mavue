@@ -7,6 +7,9 @@ from pymavlink import pymavlink
 from plugins import Plugin
 import intelhex
 
+from multiprocessing import Process,  Queue
+import time
+
 class DeviceActions(ItemWithParameters,  Plugin):
     def __init__(self,  name=None,  mavlinkInterface=None,  sysid=255,  compid=255,  boardname="",    **kwargs):
         ItemWithParameters.__init__(self,  **kwargs)
@@ -33,6 +36,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.flashFile=FileParameter(parent=self,  name="HEX file",  fileSelectionPattern="HEX files (*.hex)",  callback=self.openHexFile)
         self.readFlash=ActionParameter(parent=self,  name='Read Flash',  callback=self.readFlash)
         self.writeFlash=ActionParameter(parent=self,  name='Write Flash',  callback=self.writeFlash)
+        self.transferProgress=ProgressParameter(parent=self,  name='Transfer',  min=0,  max=100,  value=0)
         self.verifyFlash=ActionParameter(parent=self,  name='Verify Flash',  callback=self.verifyFlash)
         self.reset=ActionParameter(parent=self,  name='Reset',  callback=self.sendResetCommand)
 
@@ -46,18 +50,25 @@ class DeviceActions(ItemWithParameters,  Plugin):
                                     self.flashFile, 
                                     self.readFlash,  
                                     self.writeFlash, 
-                                    self.verifyFlash,   
+                                    self.verifyFlash,
+                                    self.transferProgress, 
                                     self.reset]
+                                    
+        #set flash file for testing:
+        self.flashFile.updateValue("/home/felix/Hydromea/AUV_Software/Bootloader/Debug/MavBoot.hex")
+        
         
     # this method will be called for each MavBoot message
     def run(self,  message):
         if message.__class__.__name__.startswith("MAVLink_bootloader_cmd_message"):
-            print(message.command,  message.param_address,  message.param_length)
+            #print(message.command,  message.param_address,  message.param_length)
             #remove ACK flag from command
             base_command=message.command & 0x3f
             if base_command in self.processorInfo.keys():
                 print ("updating processor info",  self.processorInfo[base_command].name)
                 self.processorInfo[base_command].updateValue(message.param_address)
+            if base_command==mb.BOOT_WRITE_TO_BUFFER:
+                self.ack_msg_queue.put(message)
 
         if message.__class__.__name__.startswith("MAVLink_bootloader_data_message"):
             print(message.command,  message.base_address,  message.data_length,  message.data)
@@ -74,14 +85,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.messageCounter+=1
 
     def openHexFile(self,  fileParameter):
-        filename=fileParameter.value
-        
-        if filename!=None and len(filename)>0:
-            self.hexFile=open(filename)
-            self.hexObject=intelhex.IntelHex(self.hexFile)
-            print ("successfully opened "+filename)
-            print "%0.2X - %0.2X" %(self.hexObject.minaddr(),  self.hexObject.maxaddr())
-            print self.hexObject.addresses()
+        None
 
     def readFlash(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,  self.messageCounter,   mb.BOOT_READ_MEMORY, 0, 0, 0)
@@ -89,9 +93,74 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.messageCounter+=1
 
     def writeFlash(self):    
-        msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,   mb.BOOT_READ_MEMORY, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
-        self.messageCounter+=1
+        filename=self.flashFile.value
+        
+        if filename!=None and len(filename)>0:
+            try:
+                self.hexFile=open(filename)
+            except:
+                print "file not found!"
+                return
+            self.hexObject=intelhex.IntelHex(self.hexFile)
+            print ("successfully opened "+filename)
+            print   (self.hexObject.maxaddr()-self.hexObject.minaddr())/1024,  "kbytes"
+
+        self.ack_msg_queue=Queue()
+        self.transferThread=Thread(target=self.writeFlashThread)
+        self.transferThread.start()
+        #self.writeFlashThread()
+
+    # thread for memory transfers, connected to received ACK messages via a queue
+    def writeFlashThread(self):
+        startAddress=self.hexObject.minaddr()
+        endAddress=self.hexObject.maxaddr()
+        pageSize=int(self.processorInfo[mb.BOOT_PAGE_SIZE].value)
+        
+        binsize=endAddress-startAddress
+        
+        startTime=time.time()
+        data=range(0,  32)
+        print "%0.2X - %0.2X" %(self.hexObject.minaddr(),  self.hexObject.maxaddr()),  pageSize
+        addr=startAddress
+        while addr<endAddress:
+            # break up page into 32 byte blocks
+            pageCounter=0
+            sentMessages=[]
+            while pageCounter<pageSize/32 and addr<endAddress:
+                length=min(32,  endAddress-addr)
+                msg = mb.MAVLink_bootloader_data_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_WRITE_TO_BUFFER,  addr,  length, data)
+                self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+                
+                # append transmitted message IDs to list for checking the acknowledgements
+                sentMessages.append(self.messageCounter)
+                self.messageCounter+=1
+                pageCounter+=1
+                addr+=32
+                # check if we received all acknowledgements
+                while len(sentMessages)>0:
+                    # wait for acknowledgement with a timeout of 0.5 seconds
+                    try:
+                        receivedAck=self.ack_msg_queue.get(True,  0.5)
+                    except:
+                        print "Bootloader not responding! aborting transfer"
+                        self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
+                        return
+                    recId=receivedAck.session_message_counter
+                    if recId in sentMessages:
+                        sentMessages.remove(recId)
+                    else:
+                        print "received out-of-order session_message_counter! Aborting."
+                        self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
+                        return
+                
+            #update progress bar
+            self.transferProgress.updateValue(value=addr+length,  min=startAddress,  max=endAddress)
+        finishTime=time.time()
+
+        print "transfer complete." ,  finishTime-startTime,  "seconds (",  binsize/(finishTime-startTime)/1000.0,  "kbytes/sec)"
+        self.transferProgress.updateValue(value=endAddress,  min=startAddress,  max=endAddress)
+            
+
 
     def verifyFlash(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,   mb.BOOT_READ_MEMORY, 0, 0, 0)
@@ -120,7 +189,7 @@ class Bootloader(QtGui.QDialog,  Plugin):
         self.actionButtons.add(QtGui.QPushButton("Reset all"),  "clicked()",  self.sendResetCommand)
         self.layout.addWidget(self.actionButtons)
 
-        self.deviceList=ListWidget(itemlist=[],  title="Devices",  itemclass=DeviceActions,  mavlinkInterface=self.mavlinkReceiver,  sysid=1,  compid=1)
+        self.deviceList=ListWidget(itemlist=[],  title="Devices",  itemclass=DeviceActions,  mavlinkInterface=self.mavlinkReceiver,  sysid=1,  compid=1,  on_select_cb=DeviceActions.getDeviceInfo)
         self.layout.addWidget(self.deviceList)
         
         self.resize(600,600)
@@ -138,7 +207,7 @@ class Bootloader(QtGui.QDialog,  Plugin):
             deviceActions=self.deviceList.addItem(addExistingItems=False, mavlinkInterface=self.mavlinkReceiver,   sysid=message._header.srcSystem,  compid=message._header.srcComponent)
             if deviceActions!=None:
                 deviceActions.run(message)
-        print(message.__class__.__name__)
+        #print(message.__class__.__name__)
         # update property widget
         self.deviceList.propertyWidget.update()
         

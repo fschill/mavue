@@ -58,7 +58,22 @@ class NumericalParameter(EditableParameter):
         if self.enforceStep:
             self.value=float(int(self.value/self.step)*self.step)
         
+
+class ProgressParameter(EditableParameter):
+    def __init__(self,  value=0,  min=None,  max=None,  step=0,  **kwargs):
+        EditableParameter.__init__(self,  **kwargs)
+        self.value=value
+        self.min=min
+        self.max=max
+        self.step=step
+
+    def updateValue(self,  value,  min,  max):
+        #print "new value",  value
+        self.value=value
+        self.min=min
+        self.max=max
         
+
 class ChoiceParameter(EditableParameter):
     def __init__(self,  value=None, choices=None, **kwargs):
         EditableParameter.__init__(self, **kwargs)

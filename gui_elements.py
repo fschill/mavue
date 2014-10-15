@@ -10,6 +10,8 @@ Refer to the file LICENSE.TXT which should be included in all distributions of t
 
 from PyQt4.QtCore import *
 from PyQt4 import QtGui,  QtCore
+from threading import Thread
+from multiprocessing import Queue
 
 class HorizontalBar(QtGui.QWidget):
     def __init__(self,  parent=None):
@@ -22,6 +24,8 @@ class HorizontalBar(QtGui.QWidget):
         self.layout.addWidget(widget)
         self.items.append(widget)
         self.connect(widget,   QtCore.SIGNAL(signal),  action)
+
+        
 
 class PlainComboField(QtGui.QComboBox):
     def __init__(self, parent=None,  label="", value=None,  choices=None):
@@ -79,6 +83,22 @@ class LabeledTextField(QtGui.QWidget):
                 self.text.setText(self.formatString.format(value))
 
 
+class LabeledProgressField(QtGui.QWidget):
+    def __init__(self, parent=None,  label="", value=None, min=None,  max=None,  step=1.0):
+        QtGui.QWidget.__init__( self, parent=parent)
+        self.layout = QtGui.QHBoxLayout()
+        self.setLayout(self.layout)
+        self.label=QtGui.QLabel(label)
+        self.layout.addWidget(self.label)
+        self.progress=QtGui.QProgressBar(parent=self)
+        self.updateValue(value=value,  min=min,  max=max)
+        self.layout.addWidget(self.progress)
+
+    def updateValue(self,  value,  min,  max):
+        self.progress.setMinimum(min)
+        self.progress.setMaximum(max)
+        self.progress.setValue(value)
+        
 class LabeledFileField(QtGui.QWidget):
     def __init__(self, parent=None, editable=True,  label="", value=None,  fileSelectionPattern="All files (*.*)"):
         QtGui.QWidget.__init__( self, parent=parent)
@@ -172,6 +192,12 @@ class ToolPropertyWidget(QtGui.QWidget):
                 if object.editable:
                     self.connect(w.number,  SIGNAL("valueChanged(double)"),  object.updateValue)
 
+            if object.__class__.__name__=="ProgressParameter":
+                w=LabeledProgressField(parent=self,  label=object.name,  min=object.min, max=object.max,   value=object.getValue())
+                self.parameters[p]=w
+                self.layout.addWidget(w)
+
+
             if object.__class__.__name__=="ChoiceParameter":
                 w=LabeledComboField(parent=self,  label=object.name,  value=object.getChoiceStrings()[object.choices.index(object.getValue())],  choices=object.getChoiceStrings())
                 self.parameters[p]=w
@@ -197,6 +223,9 @@ class ToolPropertyWidget(QtGui.QWidget):
 
             if object.__class__.__name__=="FileParameter":
                 w.updateValue(object.value)
+
+            if object.__class__.__name__=="ProgressParameter":
+                w.updateValue(value=object.value,  min=object.min,  max=object.max)
 
             if object.__class__.__name__=="NumericalParameter":
                 w.updateValue(object.value)

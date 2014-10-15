@@ -710,7 +710,7 @@ class MAVLink_bootloader_data_message(MAVLink_message):
                 self.data = data
 
         def pack(self, mav):
-                return MAVLink_message.pack(self, mav, 147, struct.pack('<IIBBBB32B', self.session_message_counter, self.base_address, self.target_system, self.target_component, self.command, self.data_length, self.data))
+                return MAVLink_message.pack(self, mav, 147, struct.pack('<IIBBBB32B', self.session_message_counter, self.base_address, self.target_system, self.target_component, self.command, self.data_length, *self.data))
 
 class MAVLink_heartbeat_message(MAVLink_message):
         '''
