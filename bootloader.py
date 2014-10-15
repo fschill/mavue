@@ -5,6 +5,7 @@ from abstractparameters import *
 from pymavlink.dialects.v10 import dbgextensions as mb
 from pymavlink import pymavlink
 from plugins import Plugin
+import intelhex
 
 class DeviceActions(ItemWithParameters,  Plugin):
     def __init__(self,  name=None,  mavlinkInterface=None,  sysid=255,  compid=255,  boardname="",    **kwargs):
@@ -77,7 +78,9 @@ class DeviceActions(ItemWithParameters,  Plugin):
         
         if filename!=None and len(filename)>0:
             self.hexFile=open(filename)
+            self.hexObject=intelhex.IntelHex(self.hexFile)
             print ("successfully opened "+filename)
+            print "%0.2X - %0.2X" %(self.hexObject.minaddr(),  self.hexObject.maxaddr())
 
     def readFlash(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,  self.messageCounter,   mb.BOOT_READ_MEMORY, 0, 0, 0)
