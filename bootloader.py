@@ -41,8 +41,9 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.flashFile=FileParameter(parent=self,  name="HEX file",  fileSelectionPattern="HEX files (*.hex)",  callback=self.openHexFile)
         self.readFlash=ActionParameter(parent=self,  name='Read Flash',  callback=self.readFlash)
         self.writeFlash=ActionParameter(parent=self,  name='Write Flash',  callback=self.writeFlash)
-        self.transferProgress=ProgressParameter(parent=self,  name='Transfer',  min=0,  max=100,  value=0)
         self.verifyFlash=ActionParameter(parent=self,  name='Verify Flash',  callback=self.verifyFlash)
+        self.startApp=ActionParameter(parent=self,  name='start Application',  callback=self.startApplication)
+        self.transferProgress=ProgressParameter(parent=self,  name='Transfer',  min=0,  max=100,  value=0)
         self.reset=ActionParameter(parent=self,  name='Reset',  callback=self.sendResetCommand)
 
         self.parameters=[self.name,  
@@ -60,11 +61,12 @@ class DeviceActions(ItemWithParameters,  Plugin):
                                     self.readFlash,  
                                     self.writeFlash, 
                                     self.verifyFlash,
+                                    self.startApp, 
                                     self.transferProgress, 
                                     self.reset]
                                     
         #set flash file for testing:
-        self.flashFile.updateValue("/home/felix/Hydromea/AUV_Software/Navigation/Debug_Linux/navigation.hex")
+        self.flashFile.updateValue("/home/felix/Projects/maveric/Code/Maveric_myCopter/Debug_Linux/Maveric_myCopter_linux.hex")
         
         
     # this method will be called for each MavBoot message
@@ -140,19 +142,18 @@ class DeviceActions(ItemWithParameters,  Plugin):
             addr=self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA].value
             print "skipping boot area to %0.2X" %  addr
 
-        for I in range (0,  3):
-            #enter programming mode
-            msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_START_REPROGRAM,  0,  0, 0)
-            self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        #enter programming mode
+        msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_START_REPROGRAM,  0,  0, 0)
+        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
 
-            try:
-                receivedAck=self.ack_msg_queue.get(True,  1.0)
-                if receivedAck.cmd!= mb.BOOT_START_REPROGRAM | mb.ACK_FLAG:
-                    print "Wrong ACK to START_REPROGRAM",  receivedAck.CMD
-                if receivedAck.error_id!=0:
-                    print "error entering programming mode",  receivedAck.error_id
-            except:
-                print "Failed to enter programming mode"
+        try:
+            receivedAck=self.ack_msg_queue.get(True,  1.0)
+            if receivedAck.cmd!= mb.BOOT_START_REPROGRAM | mb.ACK_FLAG:
+                print "Wrong ACK to START_REPROGRAM",  receivedAck.CMD
+            if receivedAck.error_id!=0:
+                print "error entering programming mode",  receivedAck.error_id
+        except:
+            print "Failed to enter programming mode"
 
         while addr<endAddress:
             # break up page into 32 byte blocks
@@ -206,6 +207,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
             self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
             try:
                 receivedAck=self.ack_msg_queue.get(True,  0.5)
+                #print "success writing flash page:",  "remote %02X"%receivedAck.param_address,  "local %02X"% pageAddress
                 if receivedAck.command!= mb.BOOT_WRITE_BUFFER_TO_FLASH | mb.ACK_FLAG:
                     print "error writing flash page - out of order ACK",  receivedAck.CMD
                     return
@@ -238,6 +240,11 @@ class DeviceActions(ItemWithParameters,  Plugin):
 
     def verifyFlash(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,   mb.BOOT_READ_MEMORY, 0, 0, 0)
+        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.messageCounter+=1
+
+    def startApplication(self):    
+        msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,  self.messageCounter, mb.BOOT_START_APPLICATION, 0, 0, 0)
         self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
 
