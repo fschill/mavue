@@ -15,6 +15,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.messageCounter=0
         self.mavlinkReceiver=mavlinkInterface
     
+        self.ack_msg_queue=None
         self.sysid=sysid
         self.compid=compid
         self.hexFile=None
@@ -63,21 +64,22 @@ class DeviceActions(ItemWithParameters,  Plugin):
                                     self.reset]
                                     
         #set flash file for testing:
-        self.flashFile.updateValue("/home/felix/Hydromea/AUV_Software/Bootloader/Debug/MavBoot.hex")
+        self.flashFile.updateValue("/home/felix/Hydromea/AUV_Software/Navigation/Debug_Linux/navigation.hex")
         
         
     # this method will be called for each MavBoot message
     def run(self,  message):
         if message.__class__.__name__.startswith("MAVLink_bootloader_cmd_message"):
-            #print(message.command,  message.param_address,  message.param_length)
+            
             #remove ACK flag from command
             base_command=message.command & 0x3f
+            #print("Ack:", base_command,  message.param_address,  message.param_length)
             if base_command in self.processorInfo.keys():
                 print ("updating processor info",  self.processorInfo[base_command].name)
                 self.processorInfo[base_command].updateValue(message.param_address)
                 if base_command in self.processorInfoLength.keys():
                     self.processorInfoLength[base_command].updateValue(message.param_length)
-            if base_command==mb.BOOT_WRITE_TO_BUFFER:
+            if self.ack_msg_queue!=None:
                 self.ack_msg_queue.put(message)
 
         if message.__class__.__name__.startswith("MAVLink_bootloader_data_message"):
@@ -138,16 +140,35 @@ class DeviceActions(ItemWithParameters,  Plugin):
             addr=self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA].value
             print "skipping boot area to %0.2X" %  addr
 
+        for I in range (0,  3):
+            #enter programming mode
+            msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_START_REPROGRAM,  0,  0, 0)
+            self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+
+            try:
+                receivedAck=self.ack_msg_queue.get(True,  1.0)
+                if receivedAck.cmd!= mb.BOOT_START_REPROGRAM | mb.ACK_FLAG:
+                    print "Wrong ACK to START_REPROGRAM",  receivedAck.CMD
+                if receivedAck.error_id!=0:
+                    print "error entering programming mode",  receivedAck.error_id
+            except:
+                print "Failed to enter programming mode"
+
         while addr<endAddress:
             # break up page into 32 byte blocks
             pageCounter=0
+            pageAddress=addr - (addr%pageSize)
+            pageChecksum=0
             sentMessages=[]
-            while pageCounter<pageSize/32 and addr<endAddress:
+            while pageAddress==addr - (addr%pageSize) and addr<endAddress:
+                
                 length=min(32,  endAddress-addr)
                 checksum=0
                 for i in range (0,  length):
                     data[i]=binaryData[addr-startAddress +i]
                     checksum+=data[i]
+                pageChecksum+=checksum
+                
                 msg = mb.MAVLink_bootloader_data_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_WRITE_TO_BUFFER,  addr,  length, data)
                 self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
                 
@@ -171,13 +192,36 @@ class DeviceActions(ItemWithParameters,  Plugin):
                         return
                         
                     if receivedAck.error_id!=0:
-                        print "write error:",  receivedAck.error_id
+                        print "write error:",  receivedAck.error_id,  "ret. addr:",  "%02X"%receivedAck.param_address
+                        return
                     if receivedAck.param_length!=int(checksum):
                         print "checksum error:",  receivedAck.param_length,  "vs",  checksum
+                        return
                 
                 self.messageCounter+=1
-                pageCounter+=1
                 addr+=32
+                
+            # page complete - send write to flash command
+            msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_WRITE_BUFFER_TO_FLASH,  0,  pageAddress, pageSize)
+            self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+            try:
+                receivedAck=self.ack_msg_queue.get(True,  0.5)
+                if receivedAck.command!= mb.BOOT_WRITE_BUFFER_TO_FLASH | mb.ACK_FLAG:
+                    print "error writing flash page - out of order ACK",  receivedAck.CMD
+                    return
+                if receivedAck.error_id!=0:
+                    print "error writing flash page:",  receivedAck.error_id,  "%02X"%receivedAck.param_address,  "%02X"% pageAddress
+                    return
+                if receivedAck.param_length!=pageChecksum:
+                    print "flash page checksum error:",   "%02X"%receivedAck.param_length,  "%02X"% pageChecksum
+                    
+
+            except:
+                print "Flash write: Bootloader not responding! aborting transfer"
+                self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
+                return
+
+            pageCounter+=1
 
             #update progress bar
             self.transferProgress.updateValue(value=addr+length,  min=startAddress,  max=endAddress)
@@ -189,7 +233,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
 
         print "transfer complete." ,  finishTime-startTime,  "seconds (",  binsize/(finishTime-startTime)/1000.0,  "kbytes/sec)"
-            
+        self.ack_msg_queue=None
 
 
     def verifyFlash(self):    
@@ -236,11 +280,12 @@ class Bootloader(QtGui.QDialog,  Plugin):
 
     # this method will be called for each MavBoot message
     def run(self,  message):
-        if message.__class__.__name__.startswith("MAVLink_bootloader"):            
+        if message.__class__.__name__.startswith("MAVLink_bootloader"):
+            #print(message.__class__.__name__)
             deviceActions=self.deviceList.addItem(addExistingItems=False, mavlinkInterface=self.mavlinkReceiver,   sysid=message._header.srcSystem,  compid=message._header.srcComponent)
             if deviceActions!=None:
                 deviceActions.run(message)
-        #print(message.__class__.__name__)
+        
         # update property widget
         self.deviceList.propertyWidget.update()
         
