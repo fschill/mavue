@@ -14,12 +14,11 @@
                <entry value="7" name="BOOT_PAGE_SIZE"><description>Response: BOOTLOADER_CMD message with  param_length = processor page size in bytes</description></entry>
                <entry value="8" name="BOOT_PROCESSOR_ID"><description>Response: BOOTLOADER_DATA with full unique processor ID (120 bits for AVR32)</description></entry>
                <entry value="9" name="BOOT_TARGET_VOLTAGE"><description>Response: BOOTLOADER_CMD message with  param_address = voltage in millivolts (optional)</description></entry>
-               <entry value="10" name="BOOT_FLASH_SIZE"><description>Response: BOOTLOADER_CMD message with  param_length = flash memory size in bytes</description></entry>
-               <entry value="11" name="BOOT_RAM_SIZE"><description>Response: BOOTLOADER_CMD message with  param_length = ram memory size in bytes</description></entry>
-               <entry value="12" name="BOOT_FLASH_START_ADDRESS"><description>Response: BOOTLOADER_CMD message with  param_address = start address of flash</description></entry>
-               <entry value="13" name="BOOT_RAM_START_ADDRESS"><description>Response: BOOTLOADER_CMD message with  param_address = start address of RAM</description></entry>
-               <entry value="14" name="BOOT_USERPAGE_ADDRESS"><description>Response: BOOTLOADER_CMD message with  param_address = address of user page</description></entry>
-               <entry value="15" name="BOOT_BOARD_NAME"><description>Response: BOOTLOADER_DATA message with string of board name (user definable)</description></entry>
+               <entry value="10" name="BOOT_FLASH_ADDRESS"><description>Response: BOOTLOADER_CMD message with  param_address = start address of flash,  param_length = flash memory size in bytes</description></entry>
+               <entry value="11" name="BOOT_RAM_ADDRESS"><description>Response: BOOTLOADER_CMD message with  param_address = start address of RAM, param_length = RAM memory size in bytes</description></entry>
+               <entry value="12" name="BOOT_PROTECTED_BOOT_AREA"><description>Response: BOOTLOADER_CMD message with  param_address = first address after Bootloader, param_length=size of bootloader</description></entry>
+               <entry value="13" name="BOOT_USERPAGE_ADDRESS"><description>Response: BOOTLOADER_CMD message with  param_address = address of user page, param_length=size of userpage area</description></entry>
+               <entry value="14" name="BOOT_BOARD_NAME"><description>Response: BOOTLOADER_DATA message with string of board name (user definable)</description></entry>
 
                <entry value="16" name="BOOT_START_APPLICATION"><description>leaves bootloader and starts user application</description></entry>
                <entry value="17" name="BOOT_START_AT_ADDRESS"><description>start execution at address in param_address</description></entry>

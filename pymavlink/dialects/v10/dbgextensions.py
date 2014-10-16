@@ -130,18 +130,25 @@ BOOT_PROCESSOR_ID = 8 # Response: BOOTLOADER_DATA with full unique processor ID 
                         # AVR32)
 BOOT_TARGET_VOLTAGE = 9 # Response: BOOTLOADER_CMD message with  param_address = voltage in
                         # millivolts (optional)
-BOOT_FLASH_SIZE = 10 # Response: BOOTLOADER_CMD message with  param_length = flash memory
-                        # size in bytes
-BOOT_RAM_SIZE = 11 # Response: BOOTLOADER_CMD message with  param_length = ram memory size
+BOOT_FLASH_ADDRESS = 10 # Response: BOOTLOADER_CMD message with  param_address = start address
+                        # of flash,  param_length = flash memory size
                         # in bytes
-BOOT_USERPAGE_ADDRESS = 12 # Response: BOOTLOADER_CMD message with  param_address = address of user
-                        # page
+BOOT_RAM_ADDRESS = 11 # Response: BOOTLOADER_CMD message with  param_address = start address
+                        # of RAM, param_length = RAM memory size in
+                        # bytes
+BOOT_PROTECTED_BOOT_AREA = 12 # Response: BOOTLOADER_CMD message with  param_address = first address
+                        # after Bootloader, param_length=size of
+                        # bootloader
+BOOT_USERPAGE_ADDRESS = 13 # Response: BOOTLOADER_CMD message with  param_address = address of user
+                        # page, param_length=size of userpage area
+BOOT_BOARD_NAME = 14 # Response: BOOTLOADER_DATA message with string of board name (user
+                        # definable)
 BOOT_START_APPLICATION = 16 # leaves bootloader and starts user application
 BOOT_START_AT_ADDRESS = 17 # start execution at address in param_address
 BOOT_ERASE_FLASH = 18 # erase flash starting from param_address to param_address+param_length
                         # (rounded to pages)
 BOOT_ERASE_USERPAGE = 19 # erase user page or internal eeprom
-BOOT_START_REPROGRAM = 20 # intitiates flash upload session
+BOOT_START_REPROGRAM = 20 # initiates flash upload session
 BOOT_END_REPROGRAM = 21 # ends flash upload session
 BOOT_WRITE_TO_BUFFER = 22 # BOOTLOADER_DATA: write data to internal page buffer
 BOOT_WRITE_BUFFER_TO_FLASH = 23 # BOOTLOADER_CMD: write page buffer contents to flash page at given

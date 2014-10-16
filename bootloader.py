@@ -2,7 +2,6 @@ from pyqtgraph.Qt import QtGui, QtCore
 from gui_elements import *
 from abstractparameters import *
 
-from pymavlink.dialects.v10 import dbgextensions as mb
 from pymavlink import pymavlink
 from plugins import Plugin
 import intelhex
@@ -26,11 +25,16 @@ class DeviceActions(ItemWithParameters,  Plugin):
             self.name=TextParameter(parent=self, name="Description", value=name,  editable=False)
         
         self.processorInfo=dict()
-        self.processorInfo[mb.BOOT_PROCESSOR_MODEL]=TextParameter(parent=self, name="Processor Model", value=0,  editable=False,  formatString="{:02X}")
+        self.processorInfoLength=dict()
+        self.processorInfo[mb.BOOT_PROCESSOR_MODEL]=TextParameter(parent=self, name="Processor Model", value=0,  editable=False,  formatString="0x{:02X}")
         self.processorInfo[mb.BOOT_PROCESSOR_ID]=TextParameter(parent=self, name="Processor ID", value=0,  editable=False,   formatString=" {:02X}")
         self.processorInfo[mb.BOOT_PAGE_SIZE]=TextParameter(parent=self, name="Flash page size", value=0,  editable=False,  formatString="{:d}")
-        self.processorInfo[mb.BOOT_FLASH_SIZE]=TextParameter(parent=self, name="Flash size", value=0,  editable=False,  formatString="{:d}")
-        self.processorInfo[mb.BOOT_RAM_SIZE]=TextParameter(parent=self, name="RAM size", value=0,  editable=False,  formatString="{:d}")
+        self.processorInfo[mb.BOOT_FLASH_ADDRESS]=TextParameter(parent=self, name="Flash address", value=0,  editable=False,  formatString="0x{:02X}")
+        self.processorInfoLength[mb.BOOT_FLASH_ADDRESS]=TextParameter(parent=self, name="Flash size", value=0,  editable=False,  formatString="{:d}")
+        self.processorInfo[mb.BOOT_RAM_ADDRESS]=TextParameter(parent=self, name="RAM address", value=0,  editable=False,  formatString="0x{:02X}")
+        self.processorInfoLength[mb.BOOT_RAM_ADDRESS]=TextParameter(parent=self, name="RAM size", value=0,  editable=False,  formatString="{:d}")
+        self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA]=TextParameter(parent=self, name="Application address", value=0,  editable=False,  formatString="0x{:02X}")
+        self.processorInfoLength[mb.BOOT_PROTECTED_BOOT_AREA]=TextParameter(parent=self, name="Bootloader size", value=0,  editable=False,  formatString="{:d}")
         
         self.getInfo=ActionParameter(parent=self,  name='Get Info',  callback=self.getDeviceInfo)
         self.flashFile=FileParameter(parent=self,  name="HEX file",  fileSelectionPattern="HEX files (*.hex)",  callback=self.openHexFile)
@@ -45,8 +49,12 @@ class DeviceActions(ItemWithParameters,  Plugin):
                                     self.processorInfo[mb.BOOT_PROCESSOR_MODEL],  
                                     self.processorInfo[mb.BOOT_PROCESSOR_ID], 
                                     self.processorInfo[mb.BOOT_PAGE_SIZE], 
-                                    self.processorInfo[mb.BOOT_FLASH_SIZE], 
-                                    self.processorInfo[mb.BOOT_RAM_SIZE], 
+                                    self.processorInfo[mb.BOOT_FLASH_ADDRESS], 
+                                    self.processorInfoLength[mb.BOOT_FLASH_ADDRESS], 
+                                    self.processorInfo[mb.BOOT_RAM_ADDRESS], 
+                                    self.processorInfoLength[mb.BOOT_RAM_ADDRESS], 
+                                    self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA],  
+                                    self.processorInfoLength[mb.BOOT_PROTECTED_BOOT_AREA], 
                                     self.flashFile, 
                                     self.readFlash,  
                                     self.writeFlash, 
@@ -67,6 +75,8 @@ class DeviceActions(ItemWithParameters,  Plugin):
             if base_command in self.processorInfo.keys():
                 print ("updating processor info",  self.processorInfo[base_command].name)
                 self.processorInfo[base_command].updateValue(message.param_address)
+                if base_command in self.processorInfoLength.keys():
+                    self.processorInfoLength[base_command].updateValue(message.param_length)
             if base_command==mb.BOOT_WRITE_TO_BUFFER:
                 self.ack_msg_queue.put(message)
 
@@ -113,29 +123,36 @@ class DeviceActions(ItemWithParameters,  Plugin):
     # thread for memory transfers, connected to received ACK messages via a queue
     def writeFlashThread(self):
         startAddress=self.hexObject.minaddr()
+            
         endAddress=self.hexObject.maxaddr()
         pageSize=int(self.processorInfo[mb.BOOT_PAGE_SIZE].value)
         
         binsize=endAddress-startAddress
+        binaryData=self.hexObject.tobinarray(startAddress,  endAddress)
         
         startTime=time.time()
         data=range(0,  32)
-        print "%0.2X - %0.2X" %(self.hexObject.minaddr(),  self.hexObject.maxaddr()),  pageSize
+        print "%0.2X - %0.2X" %(startAddress,  endAddress),  pageSize
         addr=startAddress
+        if addr<self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA].value:
+            addr=self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA].value
+            print "skipping boot area to %0.2X" %  addr
+
         while addr<endAddress:
             # break up page into 32 byte blocks
             pageCounter=0
             sentMessages=[]
             while pageCounter<pageSize/32 and addr<endAddress:
                 length=min(32,  endAddress-addr)
+                checksum=0
+                for i in range (0,  length):
+                    data[i]=binaryData[addr-startAddress +i]
+                    checksum+=data[i]
                 msg = mb.MAVLink_bootloader_data_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_WRITE_TO_BUFFER,  addr,  length, data)
                 self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
                 
                 # append transmitted message IDs to list for checking the acknowledgements
                 sentMessages.append(self.messageCounter)
-                self.messageCounter+=1
-                pageCounter+=1
-                addr+=32
                 # check if we received all acknowledgements
                 while len(sentMessages)>0:
                     # wait for acknowledgement with a timeout of 0.5 seconds
@@ -152,13 +169,26 @@ class DeviceActions(ItemWithParameters,  Plugin):
                         print "received out-of-order session_message_counter! Aborting."
                         self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
                         return
+                        
+                    if receivedAck.error_id!=0:
+                        print "write error:",  receivedAck.error_id
+                    if receivedAck.param_length!=int(checksum):
+                        print "checksum error:",  receivedAck.param_length,  "vs",  checksum
                 
+                self.messageCounter+=1
+                pageCounter+=1
+                addr+=32
+
             #update progress bar
             self.transferProgress.updateValue(value=addr+length,  min=startAddress,  max=endAddress)
         finishTime=time.time()
 
-        print "transfer complete." ,  finishTime-startTime,  "seconds (",  binsize/(finishTime-startTime)/1000.0,  "kbytes/sec)"
         self.transferProgress.updateValue(value=endAddress,  min=startAddress,  max=endAddress)
+        
+        msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_END_REPROGRAM,  0,  0, 0)
+        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+
+        print "transfer complete." ,  finishTime-startTime,  "seconds (",  binsize/(finishTime-startTime)/1000.0,  "kbytes/sec)"
             
 
 
@@ -175,7 +205,10 @@ class DeviceActions(ItemWithParameters,  Plugin):
 
         
 class Bootloader(QtGui.QDialog,  Plugin):
+
     def __init__(self,  parent,  mavlinkReceiver):
+        from pymavlink.dialects.v10 import dbgextensions as mb
+        global mb
         QtGui.QDialog.__init__(self)
         self.setWindowTitle("Bootloader")
         self.layout = QtGui.QVBoxLayout()
