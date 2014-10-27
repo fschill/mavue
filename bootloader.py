@@ -12,6 +12,16 @@ import time
 import sys
 import traceback
 
+
+class PageBlock:
+    def __init__(self,  addr=0,  data=[],  length=0,  checksum=0):
+        self.addr=addr
+        self.data=data
+        self.length=length
+        self.checksum=checksum
+        self.messageCounter=0
+        self.ack=0
+
 class DeviceActions(ItemWithParameters,  Plugin):
     def __init__(self,  name=None,  mavlinkInterface=None,  sysid=255,  compid=255,  boardname="",    **kwargs):
         ItemWithParameters.__init__(self,  **kwargs)
@@ -76,9 +86,14 @@ class DeviceActions(ItemWithParameters,  Plugin):
     def run(self,  message):
         if message.__class__.__name__.startswith("MAVLink_bootloader_cmd_message"):
             
+            
             #remove ACK flag from command
             base_command=message.command & 0x3f
             #print("Ack:", base_command,  message.param_address,  message.param_length)
+            if base_command==mb.BOOT_INITIATE_SESSION:
+                print "Discovered device:" , message._header.srcSystem,  message._header.srcComponent
+                self.getDeviceInfo()
+                
             if base_command in self.processorInfo.keys():
                 print ("updating processor info",  self.processorInfo[base_command].name)
                 self.processorInfo[base_command].updateValue(message.param_address)
@@ -143,7 +158,6 @@ class DeviceActions(ItemWithParameters,  Plugin):
         binaryData=self.hexObject.tobinarray(startAddress,  endAddress)
         
         startTime=time.time()
-        data=range(0,  32)
         print "%0.2X - %0.2X" %(startAddress,  endAddress),  pageSize
         addr=startAddress
         if addr<self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA].value:
@@ -174,66 +188,79 @@ class DeviceActions(ItemWithParameters,  Plugin):
             pageAddress=addr - (addr%pageSize)
             pageChecksum=0
             sentMessages=[]
+            
+            #collect all blocks for the current page:
+            blocks=[]
             while pageAddress==addr - (addr%pageSize) and addr<endAddress:
-                
                 length=min(32,  endAddress-addr)
                 checksum=0
+                data=[0 for x in range(0,  32)]
                 for i in range (0,  length):
                     data[i]=binaryData[addr-startAddress +i]
                     checksum+=(data[i]) %256
+                new_block=PageBlock(addr,  data, length,  checksum)
+                blocks.append(new_block)
+                addr+=32
                 
-                
-                #print "sending ",   "%02X"% addr
-                msg = mb.MAVLink_bootloader_data_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_WRITE_TO_BUFFER,  addr,  length, data)
-                self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
-                
-                # append transmitted message IDs to list for checking the acknowledgements
-               # sentMessages.append(self.messageCounter)
-               
-                # check if we received all acknowledgements
-                #while len(sentMessages)>0:
-                # wait for acknowledgement with a timeout of 0.5 seconds
-                try:
-                    receivedAck=self.ack_msg_queue.get(True,  0.5)
-                    recId=receivedAck.session_message_counter
-                    #if recId in sentMessages:
-                    if recId ==self.messageCounter:
-                        None
-                        #sentMessages.remove(recId)
-                    else:
-                        print "received out-of-order session_message_counter! Aborting."
-                        self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
-                        
-                        return
-                        
-                    if receivedAck.error_id!=0:
-                        print "write error:",  receivedAck.error_id,  "ret. addr:",  "%02X"%receivedAck.param_address
-                        self.ack_msg_queue=None
-                        return
-                    if receivedAck.param_length!=int(checksum):
-                        print "checksum error:",  receivedAck.param_length,  "vs",  checksum
-                        self.ack_msg_queue=None
-                        return
-                    # ACK is fine - progress to next block
-                    #print "."
+            while len(blocks)>0:
+                sentMessages=[]
+                for b in blocks:
+                    b.messageCounter=self.messageCounter
+                    #print "sending ",   "%02X"% addr
+                    msg = mb.MAVLink_bootloader_data_message(self.sysid, self.compid,   b.messageCounter,  mb.BOOT_WRITE_TO_BUFFER,  b.addr,  b.length, b.data)
+                    self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+                    # append transmitted message IDs to list for checking the acknowledgements
+                    sentMessages.append(self.messageCounter)
                     self.messageCounter+=1
-                    addr+=32
-                    pageChecksum+=checksum
-                    repeat_tries=5
-                except Empty:
-                    print "Bootloader not responding! retrying:",  repeat_tries
-                    repeat_tries-=1
-                    if repeat_tries<=0:
-                        print "Aborting."
+                    time.sleep(0.002)
+                #print "sent:",   ["%02X"%b.addr for b in blocks]
+                # check if we received all acknowledgements
+                while len(sentMessages)>0:
+                    # wait for acknowledgement with a timeout of 0.5 seconds
+                    try:
+                        receivedAck=self.ack_msg_queue.get(True,  0.5)
+                        recId=receivedAck.session_message_counter
+                        #print "recv: %02X"%receivedAck.param_address
+                        if recId in sentMessages:  # ack with correct sequence received?
+                            sentMessages.remove(recId)
+                        else:
+                            print "received out-of-order session_message_counter! Aborting."
+                            self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
+                            return
+
+                        ackBlock=None
+                        #find corresponding block
+                        for b in blocks:
+                            if b.messageCounter==receivedAck.session_message_counter:
+                                ackBlock=b
+                            
+                        if receivedAck.error_id!=0:
+                            print "write error:",  receivedAck.error_id,  "ret. addr:",  "%02X"%receivedAck.param_address
+                            repeat_tries-=1
+                        if receivedAck.param_length!=int(ackBlock.checksum):
+                            print "checksum error:",  receivedAck.param_length,  "vs",  ackBlock.checksum
+                            repeat_tries-=1
+                        # ACK is fine - progress to next block
+                        #print "."
+                        pageChecksum+=ackBlock.checksum
+                        blocks.remove(ackBlock)
+                        repeat_tries=5
+                    except Empty:
+                        print "Bootloader not responding! Addr: %02X ,  retrying:"%addr,  repeat_tries,  ["%02X"%b.addr for b in blocks]
+                        repeat_tries-=1
+                        break
+
+                        #self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
+                        #return
+                    except:  # general error
+                        print  sys.exc_info()[0],  traceback.format_exc()
                         self.ack_msg_queue=None
                         return
-                    #self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
-                    #return
-                except:
-                    print  sys.exc_info()[0],  traceback.format_exc()
+
+                if repeat_tries<=0:
+                    print "Aborting."
                     self.ack_msg_queue=None
                     return
-
             
                 
             # page complete - send write to flash command
@@ -357,3 +384,8 @@ class Bootloader(QtGui.QDialog,  Plugin):
         msg = mb.MAVLink_bootloader_cmd_message(255, 255, self.messageCounter, mb.BOOT_RESET, 0, 0, 0)
         self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
+        
+    def closeEvent(self,  event):
+        self.parent.updater.plugin_manager.active_plugins.remove(self)
+        
+        print "closing bootloader"
