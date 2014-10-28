@@ -5,8 +5,12 @@ test mavlink messages
 '''
 
 import sys, struct, time, os
-from curses import ascii
+#from curses import ascii
 from googleearth_server import *
+from multiprocessing import   Queue
+from threading import Thread
+
+from Queue import Empty
 
 # allow import from the parent directory, where mavlink.py is
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), 'pymavlink'))
@@ -58,9 +62,14 @@ class MAVlinkReceiver:
             self.master.logfile_raw=open(opts.logfile_raw,  'w',  0)
             
             
+        self.messageQueue=Queue()
+        
         self.msg=None;
         self.messages=dict();
  
+        self.receiveThread=Thread(target=self.messageReceiveThread)
+        self.receiveThread.start()
+    
         self.earthserver=None
         #self.earthserver=GoogleEarthServer()
         if self.earthserver!=None:
@@ -98,16 +107,25 @@ class MAVlinkReceiver:
         print "Requesting all parameters",  self.master.target_system
         self.master.param_fetch_all()
 
-        
+    def messageReceiveThread(self):
+        while True:
+            msg = self.master.recv_msg()
+            self.messageQueue.put(msg)
+    
+    def messagesAvailable(self):
+        return not self.messageQueue.empty()
+    
     def wait_message(self):
         if self.master==None:
             return "", None
 
         '''wait for a heartbeat so we know the target system IDs'''
-        
-        
-        msg = self.master.recv_msg()
-        
+        #msg = self.master.recv_msg()
+        try:
+            msg=self.messageQueue.get(True,  0.1)
+        except Empty:
+            return "", None;
+            
         # tag message with this instance of the receiver:
         msg_key=""
         if msg!=None and msg.__class__.__name__!="MAVLink_bad_data":

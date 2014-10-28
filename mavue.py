@@ -66,7 +66,7 @@ class Update_Thread():
         self.treeUpdateFrequency=1.0
         self.t = QtCore.QTimer()
         self.t.timeout.connect(self.update)
-        self.t.start(2)
+        self.t.start(3)
         self.plugin_manager=plugins.plugin_manager(self.plugin_callback)
         
     def plugin_callback(self,  msg):
@@ -74,25 +74,27 @@ class Update_Thread():
             self._treeViewInstance.rootNode.updateContent(msg)
         
     def update(self):
-        try:
-            msg_key, msg=self.mavlinkReceiver.wait_message()
-        except:
-            print "error in wait_message"
 
-        if msg_key=='':
-          return
-       #print "updating tree: ",msg_key
-        msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
+        while self.mavlinkReceiver.messagesAvailable():
+            try:
+                msg_key, msg=self.mavlinkReceiver.wait_message()
+            except:
+                print "error in wait_message"
 
-        #call plugins
-        self.plugin_manager.run_plugins(msg)
+            if msg_key=='':
+              return
+           #print "updating tree: ",msg_key
+            msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
 
-              
-       #self._treeViewInstance.treeView.update()
+            #call plugins
+            self.plugin_manager.run_plugins(msg)
 
-        if time.time()>self.lastTreeUpdate+1/(self.treeUpdateFrequency):
-            self._treeViewInstance.model.layoutChanged.emit()
-            self.lastTreeUpdate=time.time()
+                  
+           #self._treeViewInstance.treeView.update()
+
+            if time.time()>self.lastTreeUpdate+1/(self.treeUpdateFrequency):
+                self._treeViewInstance.model.layoutChanged.emit()
+                self.lastTreeUpdate=time.time()
 
     def reloadPlugins(self):
         global plugins
