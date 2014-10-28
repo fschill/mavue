@@ -147,6 +147,58 @@ MOTOR_WATCHDOG_TIMEOUT = 64 # Motor has not received commands within timeout per
 MOTOR_REACHED_SETPOINT = 128 # Motor is tracking the given setpoint
 MOTOR_ERROR_STATE_ENUM_END = 129 # 
 
+# BOOTLOADER_COMMANDS
+BOOT_INITIATE_SESSION = 1 # Activates bootloader after power-up
+BOOT_RESET = 2 # Reset microcontroller
+BOOT_STATE_RESET = 3 # Bootloader returns to default state
+BOOT_GET_PROCESSOR_INFORMATION = 4 # Request all processor information. Response: multiple messages with
+                        # information (see following defintions)
+BOOT_PROCESSOR_MODEL = 5 # Response: BOOTLOADER_CMD message with 32bit processor model
+                        # identifier. Optional: BOOTLOADER_DATA with
+                        # description string
+BOOT_ARCHITECTURE = 6 # Response: BOOTLOADER_DATA with Architecture description string
+BOOT_PAGE_SIZE = 7 # Response: BOOTLOADER_CMD message with  param_length = processor page
+                        # size in bytes
+BOOT_PROCESSOR_ID = 8 # Response: BOOTLOADER_DATA with full unique processor ID (120 bits for
+                        # AVR32)
+BOOT_TARGET_VOLTAGE = 9 # Response: BOOTLOADER_CMD message with  param_address = voltage in
+                        # millivolts (optional)
+BOOT_FLASH_ADDRESS = 10 # Response: BOOTLOADER_CMD message with  param_address = start address
+                        # of flash,  param_length = flash memory size
+                        # in bytes
+BOOT_RAM_ADDRESS = 11 # Response: BOOTLOADER_CMD message with  param_address = start address
+                        # of RAM, param_length = RAM memory size in
+                        # bytes
+BOOT_PROTECTED_BOOT_AREA = 12 # Response: BOOTLOADER_CMD message with  param_address = first address
+                        # after Bootloader, param_length=size of
+                        # bootloader
+BOOT_USERPAGE_ADDRESS = 13 # Response: BOOTLOADER_CMD message with  param_address = address of user
+                        # page, param_length=size of userpage area
+BOOT_BOARD_NAME = 14 # Response: BOOTLOADER_DATA message with string of board name (user
+                        # definable)
+BOOT_START_APPLICATION = 16 # leaves bootloader and starts user application
+BOOT_START_AT_ADDRESS = 17 # start execution at address in param_address
+BOOT_ERASE_FLASH = 18 # erase flash starting from param_address to param_address+param_length
+                        # (rounded to pages)
+BOOT_ERASE_USERPAGE = 19 # erase user page or internal eeprom
+BOOT_START_REPROGRAM = 20 # initiates flash upload session
+BOOT_END_REPROGRAM = 21 # ends flash upload session
+BOOT_WRITE_TO_BUFFER = 22 # BOOTLOADER_DATA: write data to internal page buffer
+BOOT_WRITE_BUFFER_TO_FLASH = 23 # BOOTLOADER_CMD: write page buffer contents to flash page at given
+                        # address
+BOOT_WRITE_BUFFER_TO_USERPAGE = 24 # BOOTLOADER_CMD: write page buffer contents to user page or internal
+                        # eeprom at relative address
+BOOT_READ_MEMORY = 25 # Request data at given memory address
+BOOT_READ_FUSES = 26 # Response: BOOTLOADER_CMD with param_address = fuse bytes
+BOOT_WRITE_FUSES = 27 # Set fuse bytes to value in param_address
+BOOT_READ_REGISTERS = 28 # Response: BOOTLOADER_DATA with register dump
+BOOT_READ_STACKPOINTER = 29 # Response: BOOTLOADER_CMD with stackpointer value in param_address
+BOOT_READ_STACK = 30 # Response: BOOTLOADER_DATA with stack dump of param_length
+BOOT_DEBUG_PAUSE = 31 # pause execution and enter debug mode
+BOOT_DEBUG_CONTINUE = 32 # continue execution
+ACK_FLAG = 128 # 
+BOOTLOADER_COMMANDS_ENUM_END = 129 # 
+
 # MAV_AUTOPILOT
 MAV_AUTOPILOT_GENERIC = 0 # Generic autopilot, full support for everything
 MAV_AUTOPILOT_PIXHAWK = 1 # PIXHAWK autopilot, http://pixhawk.ethz.ch
@@ -498,10 +550,12 @@ MAV_SEVERITY_ENUM_END = 8 #
 MAVLINK_MSG_ID_BAD_DATA = -1
 MAVLINK_MSG_ID_MOTOR_COMMAND = 150
 MAVLINK_MSG_ID_MOTOR_STATE = 151
-MAVLINK_MSG_ID_RAW_DATA_STREAM_8 = 245
-MAVLINK_MSG_ID_RAW_DATA_STREAM_16 = 246
-MAVLINK_MSG_ID_RAW_DATA_STREAM_FLOAT = 247
-MAVLINK_MSG_ID_ENTITY_NAME = 248
+MAVLINK_MSG_ID_CAN_PACKET = 243
+MAVLINK_MSG_ID_RAW_DATA_STREAM_8 = 244
+MAVLINK_MSG_ID_RAW_DATA_STREAM_16 = 245
+MAVLINK_MSG_ID_RAW_DATA_STREAM_FLOAT = 246
+MAVLINK_MSG_ID_BOOTLOADER_CMD = 247
+MAVLINK_MSG_ID_BOOTLOADER_DATA = 248
 MAVLINK_MSG_ID_HEARTBEAT = 0
 MAVLINK_MSG_ID_SYS_STATUS = 1
 MAVLINK_MSG_ID_SYSTEM_TIME = 2
@@ -636,9 +690,27 @@ class MAVLink_motor_state_message(MAVLink_message):
         def pack(self, mav):
                 return MAVLink_message.pack(self, mav, 3, struct.pack('<IfffffffffHBBB', self.time_boot_ms, self.speed, self.supply_voltage, self.current, self.power, self.torque, self.position, self.sensor_raw_speed, self.I_d, self.I_q, self.update_rate, self.control_mode, self.commutation_mode, self.motor_error_state))
 
+class MAVLink_can_packet_message(MAVLink_message):
+        '''
+        Encapsulation of individual CAN packets to tunnel through
+        other streams
+        '''
+        def __init__(self, time_boot_ms, bus_id, can_id, frame_type, dlc, values):
+                MAVLink_message.__init__(self, MAVLINK_MSG_ID_CAN_PACKET, 'CAN_PACKET')
+                self._fieldnames = ['time_boot_ms', 'bus_id', 'can_id', 'frame_type', 'dlc', 'values']
+                self.time_boot_ms = time_boot_ms
+                self.bus_id = bus_id
+                self.can_id = can_id
+                self.frame_type = frame_type
+                self.dlc = dlc
+                self.values = values
+
+        def pack(self, mav):
+                return MAVLink_message.pack(self, mav, 175, struct.pack('<IIBBB8B', self.time_boot_ms, self.can_id, self.bus_id, self.frame_type, self.dlc, self.values))
+
 class MAVLink_raw_data_stream_8_message(MAVLink_message):
         '''
-        Raw data stream (16-bit) or multi-packet arrays
+        Raw data stream (8-bit) or multi-packet arrays
         '''
         def __init__(self, time_boot_ms, stream_id, packets_per_block, packet_id, sample_count, values):
                 MAVLink_message.__init__(self, MAVLINK_MSG_ID_RAW_DATA_STREAM_8, 'RAW_DATA_STREAM_8')
@@ -672,7 +744,7 @@ class MAVLink_raw_data_stream_16_message(MAVLink_message):
 
 class MAVLink_raw_data_stream_float_message(MAVLink_message):
         '''
-        Raw data stream (16-bit) or multi-packet arrays
+        Raw data stream (32-bit float) or multi-packet arrays
         '''
         def __init__(self, time_boot_ms, stream_id, packets_per_block, packet_id, sample_count, values):
                 MAVLink_message.__init__(self, MAVLINK_MSG_ID_RAW_DATA_STREAM_FLOAT, 'RAW_DATA_STREAM_FLOAT')
@@ -687,17 +759,42 @@ class MAVLink_raw_data_stream_float_message(MAVLink_message):
         def pack(self, mav):
                 return MAVLink_message.pack(self, mav, 138, struct.pack('<I32fBBBB', self.time_boot_ms, self.values[0], self.values[1], self.values[2], self.values[3], self.values[4], self.values[5], self.values[6], self.values[7], self.values[8], self.values[9], self.values[10], self.values[11], self.values[12], self.values[13], self.values[14], self.values[15], self.values[16], self.values[17], self.values[18], self.values[19], self.values[20], self.values[21], self.values[22], self.values[23], self.values[24], self.values[25], self.values[26], self.values[27], self.values[28], self.values[29], self.values[30], self.values[31], self.stream_id, self.packets_per_block, self.packet_id, self.sample_count))
 
-class MAVLink_entity_name_message(MAVLink_message):
+class MAVLink_bootloader_cmd_message(MAVLink_message):
         '''
         Additional information on existing messages and commands
         '''
-        def __init__(self, stream_id):
-                MAVLink_message.__init__(self, MAVLINK_MSG_ID_ENTITY_NAME, 'ENTITY_NAME')
-                self._fieldnames = ['stream_id']
-                self.stream_id = stream_id
+        def __init__(self, target_system, target_component, session_message_counter, command, error_id, param_address, param_length):
+                MAVLink_message.__init__(self, MAVLINK_MSG_ID_BOOTLOADER_CMD, 'BOOTLOADER_CMD')
+                self._fieldnames = ['target_system', 'target_component', 'session_message_counter', 'command', 'error_id', 'param_address', 'param_length']
+                self.target_system = target_system
+                self.target_component = target_component
+                self.session_message_counter = session_message_counter
+                self.command = command
+                self.error_id = error_id
+                self.param_address = param_address
+                self.param_length = param_length
 
         def pack(self, mav):
-                return MAVLink_message.pack(self, mav, 146, struct.pack('<B', self.stream_id))
+                return MAVLink_message.pack(self, mav, 224, struct.pack('<IIIBBBB', self.session_message_counter, self.param_address, self.param_length, self.target_system, self.target_component, self.command, self.error_id))
+
+class MAVLink_bootloader_data_message(MAVLink_message):
+        '''
+        Bootloader memory transfer (reading or writing) for flash or
+        RAM transfers.
+        '''
+        def __init__(self, target_system, target_component, session_message_counter, command, base_address, data_length, data):
+                MAVLink_message.__init__(self, MAVLINK_MSG_ID_BOOTLOADER_DATA, 'BOOTLOADER_DATA')
+                self._fieldnames = ['target_system', 'target_component', 'session_message_counter', 'command', 'base_address', 'data_length', 'data']
+                self.target_system = target_system
+                self.target_component = target_component
+                self.session_message_counter = session_message_counter
+                self.command = command
+                self.base_address = base_address
+                self.data_length = data_length
+                self.data = data
+
+        def pack(self, mav):
+                return MAVLink_message.pack(self, mav, 147, struct.pack('<IIBBBB32B', self.session_message_counter, self.base_address, self.target_system, self.target_component, self.command, self.data_length, self.data))
 
 class MAVLink_heartbeat_message(MAVLink_message):
         '''
@@ -2473,10 +2570,12 @@ class MAVLink_debug_message(MAVLink_message):
 mavlink_map = {
         MAVLINK_MSG_ID_MOTOR_COMMAND : ( '<IffBBB', MAVLink_motor_command_message, [0, 3, 4, 5, 1, 2], 36 ),
         MAVLINK_MSG_ID_MOTOR_STATE : ( '<IfffffffffHBBB', MAVLink_motor_state_message, [0, 11, 12, 13, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9], 3 ),
+        MAVLINK_MSG_ID_CAN_PACKET : ( '<IIBBB8B', MAVLink_can_packet_message, [0, 2, 1, 3, 4, 5], 175 ),
         MAVLINK_MSG_ID_RAW_DATA_STREAM_8 : ( '<IBBBB64B', MAVLink_raw_data_stream_8_message, [0, 1, 2, 3, 4, 5], 111 ),
         MAVLINK_MSG_ID_RAW_DATA_STREAM_16 : ( '<I64hBBBB', MAVLink_raw_data_stream_16_message, [0, 2, 3, 4, 5, 1], 84 ),
         MAVLINK_MSG_ID_RAW_DATA_STREAM_FLOAT : ( '<I32fBBBB', MAVLink_raw_data_stream_float_message, [0, 2, 3, 4, 5, 1], 138 ),
-        MAVLINK_MSG_ID_ENTITY_NAME : ( '<B', MAVLink_entity_name_message, [0], 146 ),
+        MAVLINK_MSG_ID_BOOTLOADER_CMD : ( '<IIIBBBB', MAVLink_bootloader_cmd_message, [3, 4, 0, 5, 6, 1, 2], 224 ),
+        MAVLINK_MSG_ID_BOOTLOADER_DATA : ( '<IIBBBB32B', MAVLink_bootloader_data_message, [2, 3, 0, 4, 1, 5, 6], 147 ),
         MAVLINK_MSG_ID_HEARTBEAT : ( '<IBBBBB', MAVLink_heartbeat_message, [1, 2, 3, 0, 4, 5], 50 ),
         MAVLINK_MSG_ID_SYS_STATUS : ( '<IIIHHhHHHHHHb', MAVLink_sys_status_message, [0, 1, 2, 3, 4, 5, 12, 6, 7, 8, 9, 10, 11], 124 ),
         MAVLINK_MSG_ID_SYSTEM_TIME : ( '<QI', MAVLink_system_time_message, [0, 1], 137 ),
@@ -2869,9 +2968,41 @@ class MAVLink(object):
                 '''
                 return self.send(self.motor_state_encode(time_boot_ms, control_mode, commutation_mode, motor_error_state, update_rate, speed, supply_voltage, current, power, torque, position, sensor_raw_speed, I_d, I_q))
             
+        def can_packet_encode(self, time_boot_ms, bus_id, can_id, frame_type, dlc, values):
+                '''
+                Encapsulation of individual CAN packets to tunnel through other
+                streams
+
+                time_boot_ms              : Timestamp (milliseconds since system boot) (uint32_t)
+                bus_id                    : identifier of the can bus (uint8_t)
+                can_id                    : CAN arbitration field (11 or 29 bits) (uint32_t)
+                frame_type                : 0: standard frame; 1: remote frame; 2: error frame, 3: overload frame; Extended: 16: standard frame; 17: remote frame; 18: error frame, 19: overload frame (uint8_t)
+                dlc                       : data length (uint8_t)
+                values                    : raw sample values (uint8_t)
+
+                '''
+                msg = MAVLink_can_packet_message(time_boot_ms, bus_id, can_id, frame_type, dlc, values)
+                msg.pack(self)
+                return msg
+            
+        def can_packet_send(self, time_boot_ms, bus_id, can_id, frame_type, dlc, values):
+                '''
+                Encapsulation of individual CAN packets to tunnel through other
+                streams
+
+                time_boot_ms              : Timestamp (milliseconds since system boot) (uint32_t)
+                bus_id                    : identifier of the can bus (uint8_t)
+                can_id                    : CAN arbitration field (11 or 29 bits) (uint32_t)
+                frame_type                : 0: standard frame; 1: remote frame; 2: error frame, 3: overload frame; Extended: 16: standard frame; 17: remote frame; 18: error frame, 19: overload frame (uint8_t)
+                dlc                       : data length (uint8_t)
+                values                    : raw sample values (uint8_t)
+
+                '''
+                return self.send(self.can_packet_encode(time_boot_ms, bus_id, can_id, frame_type, dlc, values))
+            
         def raw_data_stream_8_encode(self, time_boot_ms, stream_id, packets_per_block, packet_id, sample_count, values):
                 '''
-                Raw data stream (16-bit) or multi-packet arrays
+                Raw data stream (8-bit) or multi-packet arrays
 
                 time_boot_ms              : Timestamp (milliseconds since system boot) (uint32_t)
                 stream_id                 : Stream ID (uint8_t)
@@ -2887,7 +3018,7 @@ class MAVLink(object):
             
         def raw_data_stream_8_send(self, time_boot_ms, stream_id, packets_per_block, packet_id, sample_count, values):
                 '''
-                Raw data stream (16-bit) or multi-packet arrays
+                Raw data stream (8-bit) or multi-packet arrays
 
                 time_boot_ms              : Timestamp (milliseconds since system boot) (uint32_t)
                 stream_id                 : Stream ID (uint8_t)
@@ -2931,7 +3062,7 @@ class MAVLink(object):
             
         def raw_data_stream_float_encode(self, time_boot_ms, stream_id, packets_per_block, packet_id, sample_count, values):
                 '''
-                Raw data stream (16-bit) or multi-packet arrays
+                Raw data stream (32-bit float) or multi-packet arrays
 
                 time_boot_ms              : Timestamp (milliseconds since system boot) (uint32_t)
                 stream_id                 : Stream ID (uint8_t)
@@ -2947,7 +3078,7 @@ class MAVLink(object):
             
         def raw_data_stream_float_send(self, time_boot_ms, stream_id, packets_per_block, packet_id, sample_count, values):
                 '''
-                Raw data stream (16-bit) or multi-packet arrays
+                Raw data stream (32-bit float) or multi-packet arrays
 
                 time_boot_ms              : Timestamp (milliseconds since system boot) (uint32_t)
                 stream_id                 : Stream ID (uint8_t)
@@ -2959,25 +3090,71 @@ class MAVLink(object):
                 '''
                 return self.send(self.raw_data_stream_float_encode(time_boot_ms, stream_id, packets_per_block, packet_id, sample_count, values))
             
-        def entity_name_encode(self, stream_id):
+        def bootloader_cmd_encode(self, target_system, target_component, session_message_counter, command, error_id, param_address, param_length):
                 '''
                 Additional information on existing messages and commands
 
-                stream_id                 : Stream ID (uint8_t)
+                target_system             : System which should execute the command (uint8_t)
+                target_component          : Component which should execute the command, 0 for all components (uint8_t)
+                session_message_counter        : unique session handle negotiated when entering boot mode. Incremented by master with each message. Slave returns the last received and processed message as acknowledgement. (uint32_t)
+                command                   : Command ID, as defined by BOOTLOADER_CMD enum. (uint8_t)
+                error_id                  : Error code in response to previous command or transfer as defined by BOOTLOADER_ERROR enum. (uint8_t)
+                param_address             : Command parameter 1 or memory address depending on command (uint32_t)
+                param_length              : Command parameter 2 or transfer length depending on command (uint32_t)
 
                 '''
-                msg = MAVLink_entity_name_message(stream_id)
+                msg = MAVLink_bootloader_cmd_message(target_system, target_component, session_message_counter, command, error_id, param_address, param_length)
                 msg.pack(self)
                 return msg
             
-        def entity_name_send(self, stream_id):
+        def bootloader_cmd_send(self, target_system, target_component, session_message_counter, command, error_id, param_address, param_length):
                 '''
                 Additional information on existing messages and commands
 
-                stream_id                 : Stream ID (uint8_t)
+                target_system             : System which should execute the command (uint8_t)
+                target_component          : Component which should execute the command, 0 for all components (uint8_t)
+                session_message_counter        : unique session handle negotiated when entering boot mode. Incremented by master with each message. Slave returns the last received and processed message as acknowledgement. (uint32_t)
+                command                   : Command ID, as defined by BOOTLOADER_CMD enum. (uint8_t)
+                error_id                  : Error code in response to previous command or transfer as defined by BOOTLOADER_ERROR enum. (uint8_t)
+                param_address             : Command parameter 1 or memory address depending on command (uint32_t)
+                param_length              : Command parameter 2 or transfer length depending on command (uint32_t)
 
                 '''
-                return self.send(self.entity_name_encode(stream_id))
+                return self.send(self.bootloader_cmd_encode(target_system, target_component, session_message_counter, command, error_id, param_address, param_length))
+            
+        def bootloader_data_encode(self, target_system, target_component, session_message_counter, command, base_address, data_length, data):
+                '''
+                Bootloader memory transfer (reading or writing) for flash or RAM
+                transfers.
+
+                target_system             : System which should execute the command (uint8_t)
+                target_component          : Component which should execute the command, 0 for all components (uint8_t)
+                session_message_counter        : unique session handle negotiated when entering boot mode. Incremented by master with each message. Slave returns the last received and processed message as acknowledgement. (uint32_t)
+                command                   : Command ID, as defined by BOOTLOADER_CMD enum. (uint8_t)
+                base_address              : 32bit memory base address to write to / read from. (uint32_t)
+                data_length               : length of data block (number of valid bytes in data) (uint8_t)
+                data                      : raw data for memory transfer (uint8_t)
+
+                '''
+                msg = MAVLink_bootloader_data_message(target_system, target_component, session_message_counter, command, base_address, data_length, data)
+                msg.pack(self)
+                return msg
+            
+        def bootloader_data_send(self, target_system, target_component, session_message_counter, command, base_address, data_length, data):
+                '''
+                Bootloader memory transfer (reading or writing) for flash or RAM
+                transfers.
+
+                target_system             : System which should execute the command (uint8_t)
+                target_component          : Component which should execute the command, 0 for all components (uint8_t)
+                session_message_counter        : unique session handle negotiated when entering boot mode. Incremented by master with each message. Slave returns the last received and processed message as acknowledgement. (uint32_t)
+                command                   : Command ID, as defined by BOOTLOADER_CMD enum. (uint8_t)
+                base_address              : 32bit memory base address to write to / read from. (uint32_t)
+                data_length               : length of data block (number of valid bytes in data) (uint8_t)
+                data                      : raw data for memory transfer (uint8_t)
+
+                '''
+                return self.send(self.bootloader_data_encode(target_system, target_component, session_message_counter, command, base_address, data_length, data))
             
         def heartbeat_encode(self, type, autopilot, base_mode, custom_mode, system_status, mavlink_version=3):
                 '''

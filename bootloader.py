@@ -212,7 +212,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                     # append transmitted message IDs to list for checking the acknowledgements
                     sentMessages.append(self.messageCounter)
                     self.messageCounter+=1
-                    time.sleep(0.002)
+                    time.sleep(0.007)
                 #print "sent:",   ["%02X"%b.addr for b in blocks]
                 # check if we received all acknowledgements
                 while len(sentMessages)>0:

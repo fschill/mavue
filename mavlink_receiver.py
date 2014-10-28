@@ -24,7 +24,7 @@ class MAVlinkReceiver:
         parser.add_option("--baudrate", dest="baudrate", type='int',
                   help="master port baud rate", default=115200)
         parser.add_option("--device", dest="device", default="", help="serial device")
-        parser.add_option("--dialect", dest="dialect", default="dbgextensions", help="Mavlink dialect")
+        parser.add_option("--dialect", dest="dialect", default="auv", help="Mavlink dialect")
         parser.add_option("--logfile", dest="logfile_raw", default="", help="output log file")
         parser.add_option("--notimestamps", dest="notimestamps", default="true", help="logfile format")
         parser.add_option("--source-system", dest='SOURCE_SYSTEM', type='int',
@@ -128,6 +128,22 @@ class MAVlinkReceiver:
                 if msg.__class__.__name__=="MAVLink_global_position_int_message":
                     self.earthserver.update(longitude=getattr(msg,  "lon")/10000000.0,  latitude=getattr(msg,  "lat")/10000000.0,  altitude=getattr(msg,  "alt")/1000.0)
                     None;
+
+            if msg.__class__.__name__.startswith("MAVLink_raw_data_stream"):
+                msg_key="%s:%s:%s"%(msg.get_srcSystem(),  msg.__class__.__name__, msg.stream_id)
+                block_size=len(msg.values)
+                all_values=[0 for x in range(0, msg.packets_per_block*block_size)]
+                
+                if msg_key in self.messages:
+                    all_values=self.messages[msg_key].values
+                
+                for i in range(0, block_size):
+                    all_values[i+ msg.packet_id*block_size]=msg.values[i]
+                    
+                msg.values=all_values
+                self.messages[msg_key]=msg
+                #if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
+                #    return "", None; 
 
             if msg.__class__.__name__=="MAVLink_statustext_message":
                 print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
