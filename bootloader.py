@@ -6,7 +6,7 @@ from pymavlink import pymavlink
 from plugins import Plugin
 import intelhex
 
-from multiprocessing import Process,  Queue
+from Queue import  Queue
 from Queue import Empty
 import time
 import sys
@@ -80,7 +80,8 @@ class DeviceActions(ItemWithParameters,  Plugin):
                                     
         #set flash file for testing:
         #self.flashFile.updateValue("/home/felix/Projects/maveric/Code/Maveric_myCopter/Debug_Linux/Maveric_myCopter_linux.hex")
-        
+        self.ack_msg_queue=Queue()
+
         
     # this method will be called for each MavBoot message
     def run(self,  message):
@@ -100,7 +101,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                 if base_command in self.processorInfoLength.keys():
                     self.processorInfoLength[base_command].updateValue(message.param_length)
             if self.ack_msg_queue!=None:
-            #    print "put in queue"
+                #print "put in queue"
                 self.ack_msg_queue.put(message)
             #else:
             #    print "no message queue!!"
@@ -140,9 +141,11 @@ class DeviceActions(ItemWithParameters,  Plugin):
             print ("successfully opened "+filename)
             print   (self.hexObject.maxaddr()-self.hexObject.minaddr())/1024,  "kbytes"
 
-        self.ack_msg_queue=Queue()
         self.transferThread=Thread(target=self.writeFlashThread)
         self.transferThread.start()
+        # flush queue 
+        while not  self.ack_msg_queue.empty():
+            self.ack_msg_queue.get()
         #self.writeFlashThread()
 
     # thread for memory transfers, connected to received ACK messages via a queue
@@ -179,7 +182,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                 print "Failed to enter programming mode"
             except:
                 print  sys.exc_info()[0],  traceback.format_exc()
-                self.ack_msg_queue=None
+                #self.ack_msg_queue=None
                 return
 
         while addr<endAddress:
@@ -212,7 +215,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                     # append transmitted message IDs to list for checking the acknowledgements
                     sentMessages.append(self.messageCounter)
                     self.messageCounter+=1
-                    time.sleep(0.007)
+                    time.sleep(0.003)
                 #print "sent:",   ["%02X"%b.addr for b in blocks]
                 # check if we received all acknowledgements
                 while len(sentMessages)>0:
@@ -254,12 +257,12 @@ class DeviceActions(ItemWithParameters,  Plugin):
                         #return
                     except:  # general error
                         print  sys.exc_info()[0],  traceback.format_exc()
-                        self.ack_msg_queue=None
+                        #self.ack_msg_queue=None
                         return
 
                 if repeat_tries<=0:
                     print "Aborting."
-                    self.ack_msg_queue=None
+                    #self.ack_msg_queue=None
                     return
             
                 
@@ -271,11 +274,11 @@ class DeviceActions(ItemWithParameters,  Plugin):
                 
                 if receivedAck.command!= mb.BOOT_WRITE_BUFFER_TO_FLASH | mb.ACK_FLAG:
                     print "error writing flash page - out of order ACK",  receivedAck.CMD
-                    self.ack_msg_queue=None
+                    #self.ack_msg_queue=None
                     return
                 if receivedAck.error_id!=0:
                     print "error writing flash page:",  receivedAck.error_id,  "%02X"%receivedAck.param_address,  "%02X"% pageAddress
-                    self.ack_msg_queue=None
+                    #self.ack_msg_queue=None
                     return
                 if receivedAck.param_length!=pageChecksum:
                     print "flash page checksum error:",   "%02X"%receivedAck.param_length,  "%02X"% pageChecksum
@@ -291,7 +294,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                 
             except:
                 print  sys.exc_info()[0],  traceback.format_exc()
-                self.ack_msg_queue=None
+                #self.ack_msg_queue=None
                 return
 
 
@@ -305,7 +308,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
 
         print "transfer complete." ,  finishTime-startTime,  "seconds (",  binsize/(finishTime-startTime)/1000.0,  "kbytes/sec)"
-        self.ack_msg_queue=None
+        #self.ack_msg_queue=None
 
 
     def verifyFlash(self):    
