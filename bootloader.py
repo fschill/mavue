@@ -59,6 +59,8 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.transferProgress=ProgressParameter(parent=self,  name='Transfer',  min=0,  max=100,  value=0)
         self.reset=ActionParameter(parent=self,  name='Reset',  callback=self.sendResetCommand)
 
+        self.burst_count=1
+
         self.parameters=[self.name,  
                                     self.getInfo,  
                                     self.processorInfo[mb.BOOT_PROCESSOR_MODEL],  
@@ -194,7 +196,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
             
             #collect all blocks for the current page:
             blocks=[]
-            while pageAddress==addr - (addr%pageSize) and addr<endAddress:
+            while (pageAddress==addr - (addr%pageSize) and addr<endAddress):
                 length=min(32,  endAddress-addr)
                 checksum=0
                 data=[0 for x in range(0,  32)]
@@ -209,17 +211,20 @@ class DeviceActions(ItemWithParameters,  Plugin):
                 sentMessages=[]
                 for b in blocks:
                     b.messageCounter=self.messageCounter
-                    #print "sending ",   "%02X"% addr
+                    #print "sending ",   "%02X"% b.addr
                     msg = mb.MAVLink_bootloader_data_message(self.sysid, self.compid,   b.messageCounter,  mb.BOOT_WRITE_TO_BUFFER,  b.addr,  b.length, b.data)
                     self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
                     # append transmitted message IDs to list for checking the acknowledgements
                     sentMessages.append(self.messageCounter)
                     self.messageCounter+=1
-                    time.sleep(0.003)
-                #print "sent:",   ["%02X"%b.addr for b in blocks]
+                    time.sleep(0.01)
+                    if len(sentMessages)>=self.burst_count:
+                        break;
+                #print "sent:",   ["%i"%b for b in sentMessages]
                 # check if we received all acknowledgements
                 while len(sentMessages)>0:
                     # wait for acknowledgement with a timeout of 0.5 seconds
+                   # print "waiting for ack"
                     try:
                         receivedAck=self.ack_msg_queue.get(True,  0.5)
                         recId=receivedAck.session_message_counter
