@@ -4,7 +4,7 @@
      
      <enums>
           <enum name="MOTOR_CONTROL_MODE">
-               <description>Content Types for data transmission handshake</description>
+               <description>Motor control modes</description>
                <entry value="0" name="MOTOR_OFF"/>
                <entry value="1" name="MOTOR_SLEEP"/>
                <entry value="2" name="MOTOR_RESET"/>
@@ -18,7 +18,7 @@
                
           </enum>
           <enum name="MOTOR_COMMUTATION_MODE">
-               <description>Content Types for data transmission handshake</description>
+               <description>Motor commutation modes for brushless controllers</description>
                <entry value="0" name="MOTOR_TRAPEZOIDAL_HALL"/>
                <entry value="1" name="MOTOR_FOC_HALL"/>
                <entry value="2" name="MOTOR_TRAPEZ_SENSORLESS"/>
@@ -90,7 +90,7 @@
           </message>
 
           <message id="151" name="MOTOR_STATE">
-               <description>Command to configure and control motor controllers</description>
+               <description>Motor state message containing measurements and state of motor controllers</description>
                <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
                <field type="uint8_t" name="control_mode">report motor control mode (MOTOR_CONTROL_MODE enum)</field> 
                <field type="uint8_t" name="commutation_mode">motor commutation mode</field> 
