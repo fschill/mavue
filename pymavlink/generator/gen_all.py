@@ -19,10 +19,10 @@ class options:
         self.output = output
         self.error_limit = error_limit
 
-protocols = [ '1.0' ]
+protocols = [ '0.9', '1.0' ]
 
 for protocol in protocols :
-    xml_directory = '../dialects/v10/'
+    xml_directory = './message_definitions/v'+protocol
     print "xml_directory is", xml_directory
     xml_file_names = glob.glob(xml_directory+'/*.xml')
 

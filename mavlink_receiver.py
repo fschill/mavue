@@ -100,17 +100,19 @@ class MAVlinkReceiver:
     def requestAllStreams(self):
         if self.master==None:
             return
-        print "Requesting all streams from ",  self.master.target_system
-        reqMsg=pymavlink.MAVLink_request_data_stream_message(target_system=self.master.target_system, target_component=self.master.target_component, req_stream_id=255, req_message_rate=0, start_stop=0)
-
+        print "Requesting all streams from ",  self.master.target_system,  self.master.target_component
+        reqMsg=pymavlink.MAVLink_request_data_stream_message(target_system=self.master.target_system, target_component=0, req_stream_id=255, req_message_rate=0, start_stop=0)
         self.master.write(reqMsg.pack(pymavlink.MAVLink(file=0,  srcSystem=self.master.source_system)))
-        print "Requesting all parameters",  self.master.target_system
+        
+        #time.sleep(0.1)
+        print "Requesting all parameters",  self.master.target_system,  self.master.target_component
         self.master.param_fetch_all()
 
     def messageReceiveThread(self):
         while True:
             msg = self.master.recv_msg()
             self.messageQueue.put(msg)
+            time.sleep(0.001)
     
     def messagesAvailable(self):
         return not self.messageQueue.empty()

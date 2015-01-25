@@ -30,6 +30,8 @@ class HorizontalBar(QtGui.QWidget):
 class PlainComboField(QtGui.QComboBox):
     def __init__(self, parent=None,  label="", value=None,  choices=None):
         QtGui.QWidget.__init__( self, parent=parent)
+        if not value in choices:
+            choices.append(value)
         for t in choices:
             self.addItem(QString(t))
         if value!=None:

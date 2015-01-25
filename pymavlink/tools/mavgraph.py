@@ -6,17 +6,46 @@ Andrew Tridgell August 2011
 
 import sys, struct, time, os, datetime
 import math, re
-import pylab, matplotlib
+import matplotlib
 from math import *
 
 from pymavlink.mavextra import *
 
-locator = None
-formatter = None
+colourmap = {
+    'apm' : {
+        'MANUAL'    : (1.0,   0,   0),
+        'AUTO'      : (  0, 1.0,   0),
+        'LOITER'    : (  0,   0, 1.0),
+        'FBWA'      : (1.0, 0.5,   0),
+        'RTL'       : (  1,   0, 0.5),
+        'STABILIZE' : (0.5, 1.0,   0),
+        'LAND'      : (  0, 1.0, 0.5),
+        'STEERING'  : (0.5,   0, 1.0),
+        'HOLD'      : (  0, 0.5, 1.0),
+        'ALT_HOLD'  : (1.0, 0.5, 0.5),
+        'CIRCLE'    : (0.5, 1.0, 0.5),
+        'POSITION'  : (1.0, 0.0, 1.0),
+        'GUIDED'    : (0.5, 0.5, 1.0),
+        'ACRO'      : (1.0, 1.0,   0),
+        'CRUISE'    : (  0, 1.0, 1.0)
+        },
+    'px4' : {
+        'MANUAL'    : (1.0,   0,   0),
+        'SEATBELT'  : (  0.5, 0.5,   0),
+        'EASY'      : (  0, 1.0,   0),
+        'AUTO'    : (  0,   0, 1.0),
+        'UNKNOWN'    : (  1.0,   1.0, 1.0)
+        }
+    }
+
+edge_colour = (0.1, 0.1, 0.1)
+
+lowest_x = None
+highest_x = None
 
 def plotit(x, y, fields, colors=[]):
     '''plot a set of graphs using date for x axis'''
-    global locator, formatter
+    global lowest_x, highest_x
     pylab.ion()
     fig = pylab.figure(num=1, figsize=(12,6))
     ax1 = fig.gca()
@@ -24,19 +53,23 @@ def plotit(x, y, fields, colors=[]):
     xrange = 0.0
     for i in range(0, len(fields)):
         if len(x[i]) == 0: continue
-        if x[i][-1] - x[i][0] > xrange:
-            xrange = x[i][-1] - x[i][0]
+        if lowest_x is None or x[i][0] < lowest_x:
+            lowest_x = x[i][0]
+        if highest_x is None or x[i][-1] > highest_x:
+            highest_x = x[i][-1]
+    if highest_x is None or lowest_x is None:
+        return
+    xrange = highest_x - lowest_x
     xrange *= 24 * 60 * 60
-    if formatter is None:
-        formatter = matplotlib.dates.DateFormatter('%H:%M:%S')
-        interval = 1
-        intervals = [ 1, 2, 5, 10, 15, 30, 60, 120, 240, 300, 600,
-                      900, 1800, 3600, 7200, 5*3600, 10*3600, 24*3600 ]
-        for interval in intervals:
-            if xrange / interval < 15:
-                break
-        locator = matplotlib.dates.SecondLocator(interval=interval)
-    if not opts.xaxis:
+    formatter = matplotlib.dates.DateFormatter('%H:%M:%S')
+    interval = 1
+    intervals = [ 1, 2, 5, 10, 15, 30, 60, 120, 240, 300, 600,
+                  900, 1800, 3600, 7200, 5*3600, 10*3600, 24*3600 ]
+    for interval in intervals:
+        if xrange / interval < 15:
+            break
+    locator = matplotlib.dates.SecondLocator(interval=interval)
+    if not args.xaxis:
         ax1.xaxis.set_major_locator(locator)
         ax1.xaxis.set_major_formatter(formatter)
     empty = True
@@ -55,7 +88,7 @@ def plotit(x, y, fields, colors=[]):
             if ax2 == None:
                 ax2 = ax1.twinx()
             ax = ax2
-            if not opts.xaxis:
+            if not args.xaxis:
                 ax2.xaxis.set_major_locator(locator)
                 ax2.xaxis.set_major_formatter(formatter)
             label = fields[i]
@@ -65,63 +98,84 @@ def plotit(x, y, fields, colors=[]):
         else:
             ax1_labels.append(fields[i])
             ax = ax1
-        if opts.xaxis:
-            if opts.marker is not None:
-                marker = opts.marker
+        if args.xaxis:
+            if args.marker is not None:
+                marker = args.marker
             else:
                 marker = '+'
-            if opts.linestyle is not None:
-                linestyle = opts.linestyle
+            if args.linestyle is not None:
+                linestyle = args.linestyle
             else:
                 linestyle = 'None'
             ax.plot(x[i], y[i], color=color, label=fields[i],
                     linestyle=linestyle, marker=marker)
         else:
-            if opts.marker is not None:
-                marker = opts.marker
+            if args.marker is not None:
+                marker = args.marker
             else:
                 marker = 'None'
-            if opts.linestyle is not None:
-                linestyle = opts.linestyle
+            if args.linestyle is not None:
+                linestyle = args.linestyle
             else:
                 linestyle = '-'
             ax.plot_date(x[i], y[i], color=color, label=fields[i],
                          linestyle=linestyle, marker=marker, tz=None)
-        pylab.draw()
         empty = False
+    if args.flightmode is not None:
+        for i in range(len(modes)-1):
+            c = colourmap[args.flightmode].get(modes[i][1], edge_colour)
+            ax1.axvspan(modes[i][0], modes[i+1][0], fc=c, ec=edge_colour, alpha=0.1)
+        c = colourmap[args.flightmode].get(modes[-1][1], edge_colour)
+        ax1.axvspan(modes[-1][0], ax1.get_xlim()[1], fc=c, ec=edge_colour, alpha=0.1)
     if ax1_labels != []:
-        ax1.legend(ax1_labels,loc=opts.legend)
+        ax1.legend(ax1_labels,loc=args.legend)
     if ax2_labels != []:
-        ax2.legend(ax2_labels,loc=opts.legend2)
+        ax2.legend(ax2_labels,loc=args.legend2)
     if empty:
         print("No data to graph")
         return
 
 
-from optparse import OptionParser
-parser = OptionParser("mavgraph.py [options] <filename> <fields>")
+from argparse import ArgumentParser
+parser = ArgumentParser(description=__doc__)
 
-parser.add_option("--no-timestamps",dest="notimestamps", action='store_true', help="Log doesn't have timestamps")
-parser.add_option("--planner",dest="planner", action='store_true', help="use planner file format")
-parser.add_option("--condition",dest="condition", default=None, help="select packets by a condition")
-parser.add_option("--labels",dest="labels", default=None, help="comma separated field labels")
-parser.add_option("--legend",  default='upper left', help="default legend position")
-parser.add_option("--legend2",  default='upper right', help="default legend2 position")
-parser.add_option("--marker",  default=None, help="point marker")
-parser.add_option("--linestyle",  default=None, help="line style")
-parser.add_option("--xaxis",  default=None, help="X axis expression")
-parser.add_option("--zero-time-base",  action='store_true', help="use Z time base for DF logs")
-(opts, args) = parser.parse_args()
+parser.add_argument("--no-timestamps", dest="notimestamps", action='store_true', help="Log doesn't have timestamps")
+parser.add_argument("--planner", action='store_true', help="use planner file format")
+parser.add_argument("--condition", default=None, help="select packets by a condition")
+parser.add_argument("--labels", default=None, help="comma separated field labels")
+parser.add_argument("--legend", default='upper left', help="default legend position")
+parser.add_argument("--legend2", default='upper right', help="default legend2 position")
+parser.add_argument("--marker", default=None, help="point marker")
+parser.add_argument("--linestyle", default=None, help="line style")
+parser.add_argument("--xaxis", default=None, help="X axis expression")
+parser.add_argument("--multi", action='store_true', help="multiple files with same colours")
+parser.add_argument("--zero-time-base", action='store_true', help="use Z time base for DF logs")
+parser.add_argument("--flightmode", default=None,
+                    help="Choose the plot background according to the active flight mode of the specified type, e.g. --flightmode=apm for ArduPilot or --flightmode=px4 for PX4 stack logs.  Cannot be specified with --xaxis.")
+parser.add_argument("--dialect", default="ardupilotmega", help="MAVLink dialect")
+parser.add_argument("--output", default=None, help="provide an output format")
+parser.add_argument("logs_fields", metavar="<LOG or FIELD>", nargs="+")
+args = parser.parse_args()
 
 from pymavlink import mavutil
 
-if len(args) < 2:
-    print("Usage: mavlogdump.py [options] <LOGFILES...> <fields...>")
+if args.flightmode is not None and args.xaxis:
+    print("Cannot request flightmode backgrounds with an x-axis expression")
     sys.exit(1)
+
+if args.flightmode is not None and args.flightmode not in colourmap:
+    print("Unknown flight controller '%s' in specification of --flightmode" % args.flightmode)
+    sys.exit(1)
+
+
+if args.output is not None:
+    matplotlib.use('Agg')
+
+import pylab
 
 filenames = []
 fields = []
-for f in args:
+for f in args.logs_fields:
     if os.path.exists(f):
         filenames.append(f)
     else:
@@ -130,11 +184,12 @@ msg_types = set()
 multiplier = []
 field_types = []
 
-colors = [ 'red', 'green', 'blue', 'orange', 'olive', 'black', 'grey', 'yellow' ]
+colors = [ 'red', 'green', 'blue', 'orange', 'olive', 'black', 'grey', 'yellow', 'brown', 'darkcyan', 'cornflowerblue', 'darkmagenta', 'deeppink', 'darkred']
 
 # work out msg types we are interested in
 x = []
 y = []
+modes = []
 axes = []
 first_only = []
 re_caps = re.compile('[A-Z_][A-Z0-9_]+')
@@ -147,9 +202,11 @@ for f in fields:
     axes.append(1)
     first_only.append(False)
 
-def add_data(t, msg, vars):
+def add_data(t, msg, vars, flightmode):
     '''add some data'''
     mtype = msg.get_type()
+    if args.flightmode is not None and (len(modes) == 0 or modes[-1][1] != flightmode):
+        modes.append((t, flightmode))
     if mtype not in msg_types:
         return
     for i in range(0, len(fields)):
@@ -165,33 +222,33 @@ def add_data(t, msg, vars):
         v = mavutil.evaluate_expression(f, vars)
         if v is None:
             continue
-        if opts.xaxis is None:
+        if args.xaxis is None:
             xv = t
         else:
-            xv = mavutil.evaluate_expression(opts.xaxis, vars)
+            xv = mavutil.evaluate_expression(args.xaxis, vars)
             if xv is None:
                 continue
-        y[i].append(v)            
+        y[i].append(v)
         x[i].append(xv)
 
 def process_file(filename):
     '''process one file'''
     print("Processing %s" % filename)
-    mlog = mavutil.mavlink_connection(filename, notimestamps=opts.notimestamps, zero_time_base=opts.zero_time_base)
+    mlog = mavutil.mavlink_connection(filename, notimestamps=args.notimestamps, zero_time_base=args.zero_time_base, dialect=args.dialect)
     vars = {}
-    
+
     while True:
-        msg = mlog.recv_match(opts.condition)
+        msg = mlog.recv_match(args.condition)
         if msg is None: break
         tdays = matplotlib.dates.date2num(datetime.datetime.fromtimestamp(msg._timestamp))
-        add_data(tdays, msg, mlog.messages)
+        add_data(tdays, msg, mlog.messages, mlog.flightmode)
 
 if len(filenames) == 0:
     print("No files to process")
     sys.exit(1)
 
-if opts.labels is not None:
-    labels = opts.labels.split(',')
+if args.labels is not None:
+    labels = args.labels.split(',')
     if len(labels) != len(fields)*len(filenames):
         print("Number of labels (%u) must match number of fields (%u)" % (
             len(labels), len(fields)*len(filenames)))
@@ -210,9 +267,18 @@ for fi in range(0, len(filenames)):
         lab = labels[fi*len(fields):(fi+1)*len(fields)]
     else:
         lab = fields[:]
-    plotit(x, y, lab, colors=colors[fi*len(fields):])
+    if args.multi:
+        col = colors[:]
+    else:
+        col = colors[fi*len(fields):]
+    plotit(x, y, lab, colors=col)
     for i in range(0, len(x)):
         x[i] = []
         y[i] = []
-pylab.show()
-raw_input('press enter to exit....')
+if args.output is None:
+    pylab.show()
+    pylab.draw()
+    raw_input('press enter to exit....')
+else:
+    pylab.legend(loc=2,prop={'size':8})
+    pylab.savefig(args.output, bbox_inches='tight', dpi=200)

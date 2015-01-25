@@ -103,7 +103,7 @@ class MAVLink_message(object):
             v = getattr(self, a)
             ret += '%s : %s, ' % (a, v)
         ret = ret[0:-2] + '}'
-        return ret            
+        return ret
 
     def to_dict(self):
         d = dict({})
@@ -132,15 +132,33 @@ class MAVLink_message(object):
       'crc_extra' : xml.crc_extra,
       'WIRE_PROTOCOL_VERSION' : xml.wire_protocol_version })
 
-
 def generate_enums(outf, enums):
     print("Generating enums")
-    outf.write("\n# enums\n")
+    outf.write('''
+# enums
+
+class EnumEntry(object):
+    def __init__(self, name, description):
+        self.name = name
+        self.description = description
+        self.param = {}
+        
+enums = {}
+''')    
     wrapper = textwrap.TextWrapper(initial_indent="", subsequent_indent="                        # ")
     for e in enums:
         outf.write("\n# %s\n" % e.name)
+        outf.write("enums['%s'] = {}\n" % e.name)
         for entry in e.entry:
             outf.write("%s = %u # %s\n" % (entry.name, entry.value, wrapper.fill(entry.description)))
+            outf.write("enums['%s'][%d] = EnumEntry('%s', '''%s''')\n" % (e.name,
+                                                                          int(entry.value), entry.name,
+                                                                          entry.description))
+            for param in entry.param:
+                outf.write("enums['%s'][%d].param[%d] = '''%s'''\n" % (e.name,
+                                                                       int(entry.value),
+                                                                       int(param.index),
+                                                                       param.description))
 
 def generate_message_ids(outf, msgs):
     print("Generating message IDs")
@@ -171,7 +189,7 @@ class MAVLink_%s_message(MAVLink_message):
         def pack(self, mav):
                 return MAVLink_message.pack(self, mav, %u, struct.pack('%s'""" % (m.crc_extra, m.fmtstr))
         for field in m.ordered_fields:
-                if (field.type == "float" and field.array_length > 1):
+                if (field.type != "char" and field.array_length > 1):
                         for i in range(field.array_length):
                                 outf.write(", self.{0:s}[{1:d}]".format(field.name,i))
                 else:
@@ -197,7 +215,7 @@ def mavfmt(field):
         }
 
     if field.array_length:
-        if field.type in ['char']:
+        if field.type == 'char':
             return str(field.array_length)+'s'
         return str(field.array_length)+map[field.type]
     return map[field.type]
@@ -207,10 +225,10 @@ def generate_mavlink_class(outf, msgs, xml):
 
     outf.write("\n\nmavlink_map = {\n");
     for m in msgs:
-        outf.write("        MAVLINK_MSG_ID_%s : ( '%s', MAVLink_%s_message, %s, %u ),\n" % (
-            m.name.upper(), m.fmtstr, m.name.lower(), m.order_map, m.crc_extra))
+        outf.write("        MAVLINK_MSG_ID_%s : ( '%s', MAVLink_%s_message, %s, %s, %u ),\n" % (
+            m.name.upper(), m.fmtstr, m.name.lower(), m.order_map, m.len_map, m.crc_extra))
     outf.write("}\n\n")
-    
+
     t.write(outf, """
 class MAVError(Exception):
         '''MAVLink error class'''
@@ -241,8 +259,8 @@ class MAVLink_bad_data(MAVLink_message):
 
         def __str__(self):
             '''Override the __str__ function from MAVLink_messages because non-printable characters are common in to be the reason for this message to exist.'''
-            return '%s {%s, data:%s}' % (self._type, self.reason, [('%x' % ord(i) if isinstance(i, str) else '%x' % i) for i in self.data])  
-            
+            return '%s {%s, data:%s}' % (self._type, self.reason, [('%x' % ord(i) if isinstance(i, str) else '%x' % i) for i in self.data])
+
 class MAVLink(object):
         '''MAVLink protocol handling class'''
         def __init__(self, file, srcSystem=0, srcComponent=0):
@@ -280,7 +298,7 @@ class MAVLink(object):
             self.send_callback = callback
             self.send_callback_args = args
             self.send_callback_kwargs = kwargs
-            
+
         def send(self, mavmsg):
                 '''send a MAVLink message'''
                 buf = mavmsg.pack(self)
@@ -319,7 +337,7 @@ class MAVLink(object):
                     return None
                 self.have_prefix_error = True
                 self.total_receive_errors += 1
-                raise MAVError("invalid MAVLink prefix '%s'" % magic) 
+                raise MAVError("invalid MAVLink prefix '%s'" % magic)
             self.have_prefix_error = False
             if len(self.buf) >= 2:
                 (magic, self.expected_length) = struct.unpack('BB', self.buf[0:2])
@@ -372,7 +390,7 @@ class MAVLink(object):
                     raise MAVError('unknown MAVLink message ID %u' % msgId)
 
                 # decode the payload
-                (fmt, type, order_map, crc_extra) = mavlink_map[msgId]
+                (fmt, type, order_map, len_map, crc_extra) = mavlink_map[msgId]
 
                 # decode the checksum
                 try:
@@ -380,7 +398,7 @@ class MAVLink(object):
                 except struct.error as emsg:
                     raise MAVError('Unable to unpack MAVLink CRC: %s' % emsg)
                 crc2 = x25crc(msgbuf[1:-2])
-                if ${crc_extra}: # using CRC extra 
+                if ${crc_extra}: # using CRC extra
                     crc2.accumulate(chr(crc_extra))
                 if crc != crc2.crc:
                     raise MAVError('invalid MAVLink CRC in msgID %u 0x%04x should be 0x%04x' % (msgId, crc, crc2.crc))
@@ -392,33 +410,25 @@ class MAVLink(object):
                         type, fmt, len(msgbuf[6:-2]), emsg))
 
                 tlist = list(t)
-                
-                #repack arrays into single list elements
-                tlist_output=[]
-                digits_started=False
-                repeat_number=0
-                parse_index=0
-                for el in fmt:
-                   if el in ['0','1','2','3','4','5','6','7','8','9']:
-                     digits_started=True
-                     repeat_number=10*repeat_number+int(el)
-                   if el in ['c', 'b', 'B', '?', 'h', 'H', 'i', 'I', 'l', 'L', 'q', 'Q', 'f', 'd', 's', 'p', 'P']:
-                     if digits_started and el!='s':
-                        #append a list 
-                        tlist_output.append(tlist[parse_index:parse_index+repeat_number])
-                        parse_index+=repeat_number
-                        digits_started=False
-                     else:
-                        tlist_output.append(tlist[parse_index])
-                        parse_index+=1
-                
-                tlist=tlist_output
-                
                 # handle sorted fields
                 if ${sort_fields}:
                     t = tlist[:]
-                    for i in range(0, len(tlist)):
-                        tlist[i] = t[order_map[i]]
+                    if sum(len_map) == len(len_map):
+                        # message has no arrays in it
+                        for i in range(0, len(tlist)):
+                            tlist[i] = t[order_map[i]]
+                    else:
+                        # message has some arrays
+                        tlist = []
+                        for i in range(0, len(order_map)):
+                            order = order_map[i]
+                            L = len_map[order]
+                            tip = sum(len_map[:order])
+                            field = t[tip]
+                            if L == 1 or isinstance(field, str):
+                                tlist.append(field)
+                            else:
+                                tlist.append(t[tip:(tip + L)])
 
                 # terminate any strings
                 for i in range(0, len(tlist)):
@@ -472,7 +482,7 @@ def generate_methods(outf, msgs):
                 msg = MAVLink_${NAMELOWER}_message(${FIELDNAMES})
                 msg.pack(self)
                 return msg
-            
+
 """, sub)
 
         t.write(outf, """
@@ -481,7 +491,7 @@ def generate_methods(outf, msgs):
                 ${COMMENT}
                 '''
                 return self.send(self.${NAMELOWER}_encode(${FIELDNAMES}))
-            
+
 """, sub)
 
 
@@ -508,8 +518,12 @@ def generate(basename, xml):
         for f in m.ordered_fields:
             m.fmtstr += mavfmt(f)
         m.order_map = [ 0 ] * len(m.fieldnames)
+        m.len_map = [ 0 ] * len(m.fieldnames)
         for i in range(0, len(m.fieldnames)):
             m.order_map[i] = m.ordered_fieldnames.index(m.fieldnames[i])
+        for i in range(0, len(m.fieldnames)):
+            n = m.order_map[i]
+            m.len_map[n] = m.fieldlengths[i]
 
     print("Generating %s" % filename)
     outf = open(filename, "w")

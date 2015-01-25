@@ -105,6 +105,14 @@ def mag_field(RAW_IMU, SENSOR_OFFSETS=None, ofs=None):
         mag_z += ofs[2] - SENSOR_OFFSETS.mag_ofs_z
     return sqrt(mag_x**2 + mag_y**2 + mag_z**2)
 
+def mag_field_df(MAG, ofs=None):
+    '''calculate magnetic field strength from raw magnetometer (dataflash version)'''
+    mag = Vector3(MAG.MagX, MAG.MagY, MAG.MagZ)
+    offsets = Vector3(MAG.OfsX, MAG.OfsY, MAG.OfsZ)
+    if ofs is not None:
+        mag = (mag - offsets) + Vector3(ofs[0], ofs[1], ofs[2])
+    return mag.length()
+
 def get_motor_offsets(SERVO_OUTPUT_RAW, ofs, motor_ofs):
     '''calculate magnetic field strength from raw magnetometer'''
     import mavutil
@@ -472,9 +480,11 @@ first_fix = None
 def distance_home(GPS_RAW):
     '''distance from first fix point'''
     global first_fix
-    if GPS_RAW.fix_type < 2:
+    if (hasattr(GPS_RAW, 'fix_type') and GPS_RAW.fix_type < 2) or \
+       (hasattr(GPS_RAW, 'Status')   and GPS_RAW.Status   < 2):
         return 0
-    if first_fix == None or first_fix.fix_type < 2:
+
+    if first_fix == None:
         first_fix = GPS_RAW
         return 0
     return distance_two(GPS_RAW, first_fix)
@@ -661,20 +671,20 @@ def rover_lat_accel(VFR_HUD, SERVO_OUTPUT_RAW):
     return accel
 
 
-def demix1(servo1, servo2):
+def demix1(servo1, servo2, gain=0.5):
     '''de-mix a mixed servo output'''
     s1 = servo1 - 1500
     s2 = servo2 - 1500
-    out1 = (s1+s2)/2
-    out2 = (s1-s2)/2
+    out1 = (s1+s2)*gain
+    out2 = (s1-s2)*gain
     return out1+1500
 
-def demix2(servo1, servo2):
+def demix2(servo1, servo2, gain=0.5):
     '''de-mix a mixed servo output'''
     s1 = servo1 - 1500
     s2 = servo2 - 1500
-    out1 = (s1+s2)/2
-    out2 = (s1-s2)/2
+    out1 = (s1+s2)*gain
+    out2 = (s1-s2)*gain
     return out2+1500
 
 def wrap_180(angle):
@@ -859,41 +869,41 @@ def wrap_valid_longitude(lon):
   return (((lon + 180.0) % 360.0) - 180.0)
 
 def gps_newpos(lat, lon, bearing, distance):
-	'''extrapolate latitude/longitude given a heading and distance
-	thanks to http://www.movable-type.co.uk/scripts/latlong.html
-	'''
-        import math
-	lat1 = math.radians(lat)
-	lon1 = math.radians(lon)
-	brng = math.radians(bearing)
-	dr = distance/radius_of_earth
-
-	lat2 = math.asin(math.sin(lat1)*math.cos(dr) +
-                         math.cos(lat1)*math.sin(dr)*math.cos(brng))
-	lon2 = lon1 + math.atan2(math.sin(brng)*math.sin(dr)*math.cos(lat1), 
-                                 math.cos(dr)-math.sin(lat1)*math.sin(lat2))
-	return (math.degrees(lat2), wrap_valid_longitude(math.degrees(lon2)))
+  '''extrapolate latitude/longitude given a heading and distance
+  thanks to http://www.movable-type.co.uk/scripts/latlong.html
+  '''
+  import math
+  lat1 = math.radians(lat)
+  lon1 = math.radians(lon)
+  brng = math.radians(bearing)
+  dr = distance/radius_of_earth
+  
+  lat2 = math.asin(math.sin(lat1)*math.cos(dr) +
+                   math.cos(lat1)*math.sin(dr)*math.cos(brng))
+  lon2 = lon1 + math.atan2(math.sin(brng)*math.sin(dr)*math.cos(lat1), 
+                           math.cos(dr)-math.sin(lat1)*math.sin(lat2))
+  return (math.degrees(lat2), wrap_valid_longitude(math.degrees(lon2)))
 
 def gps_offset(lat, lon, east, north):
-	'''return new lat/lon after moving east/north
-	by the given number of meters'''
-        import math
-	bearing = math.degrees(math.atan2(east, north))
-	distance = math.sqrt(east**2 + north**2)
-	return gps_newpos(lat, lon, bearing, distance)
+  '''return new lat/lon after moving east/north
+  by the given number of meters'''
+  import math
+  bearing = math.degrees(math.atan2(east, north))
+  distance = math.sqrt(east**2 + north**2)
+  return gps_newpos(lat, lon, bearing, distance)
 
 ekf_home = None
 
 def ekf1_pos(EKF1):
-    '''calculate EKF position when EKF disabled'''
-    global ekf_home
-    from pymavlink import mavutil
-    self = mavutil.mavfile_global
-    if ekf_home is None:
-        if not 'GPS' in self.messages or self.messages['GPS'].Status != 3:
-            return None
-        ekf_home = self.messages['GPS']
-        (ekf_home.Lat, ekf_home.Lng) = gps_offset(ekf_home.Lat, ekf_home.Lng, -EKF1.PE, -EKF1.PN)
-    (lat,lon) = gps_offset(ekf_home.Lat, ekf_home.Lng, EKF1.PE, EKF1.PN)
-    return (lat, lon)
+  '''calculate EKF position when EKF disabled'''
+  global ekf_home
+  from pymavlink import mavutil
+  self = mavutil.mavfile_global
+  if ekf_home is None:
+      if not 'GPS' in self.messages or self.messages['GPS'].Status != 3:
+          return None
+      ekf_home = self.messages['GPS']
+      (ekf_home.Lat, ekf_home.Lng) = gps_offset(ekf_home.Lat, ekf_home.Lng, -EKF1.PE, -EKF1.PN)
+  (lat,lon) = gps_offset(ekf_home.Lat, ekf_home.Lng, EKF1.PE, EKF1.PN)
+  return (lat, lon)
 
