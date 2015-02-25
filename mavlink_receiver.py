@@ -173,7 +173,8 @@ class MAVlinkReceiver:
         return "", None;
 
     def scanForSerials(self):
-        return mavutil.auto_detect_serial(['*ttyUSB*',  '*ttyACM*'])
+        print "detecting serial ports..."
+        return mavutil.auto_detect_serial(['*ttyUSB*',  '*ttyACM*', '*tty.usb*'])
 
 #rcv=MAVlinkReceiver();
 # wait for the heartbeat msg to find the system ID
