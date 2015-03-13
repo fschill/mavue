@@ -59,7 +59,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.transferProgress=ProgressParameter(parent=self,  name='Transfer',  min=0,  max=100,  value=0)
         self.reset=ActionParameter(parent=self,  name='Reset',  callback=self.sendResetCommand)
 
-        self.burst_count=1
+        self.burst_count=4
 
         self.parameters=[self.name,  
                                     self.getInfo,  
@@ -217,7 +217,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                     # append transmitted message IDs to list for checking the acknowledgements
                     sentMessages.append(self.messageCounter)
                     self.messageCounter+=1
-                    time.sleep(0.01)
+                    time.sleep(0.02)
                     if len(sentMessages)>=self.burst_count:
                         break;
                 #print "sent:",   ["%i"%b for b in sentMessages]
