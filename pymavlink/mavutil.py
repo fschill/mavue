@@ -905,7 +905,8 @@ class mavlogfile(mavfile):
         return self.f.read(n)
 
     def write(self, buf):
-        self.f.write(buf)
+        #self.f.write(buf)
+        None;
 
     def scan_timestamp(self, tbuf):
         '''scan forward looking in a tlog for a timestamp in a reasonable range'''
@@ -1031,7 +1032,8 @@ def mavlink_connection(device, baud=115200, source_system=255,
             print("executing '%s'" % device)
             return mavchildexec(device, source_system=source_system)
         else:
-            return mavlogfile(device, planner_format=planner_format, write=write,
+            print "opening logfile", device
+            return mavlogfile(device, planner_format=planner_format, write=False,
                               append=append, robust_parsing=robust_parsing, notimestamps=notimestamps,
                               source_system=source_system)
     return mavserial(device, baud=baud, source_system=source_system, autoreconnect=autoreconnect)

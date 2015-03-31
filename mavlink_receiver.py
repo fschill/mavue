@@ -112,7 +112,7 @@ class MAVlinkReceiver:
         while True:
             msg = self.master.recv_msg()
             self.messageQueue.put(msg)
-            time.sleep(0.001)
+            time.sleep(0.000001)
     
     def messagesAvailable(self):
         return not self.messageQueue.empty()
