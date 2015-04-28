@@ -76,13 +76,14 @@ class Update_Thread():
     def update(self):
 
         while self.mavlinkReceiver.messagesAvailable():
+            msg_key=""
             try:
                 msg_key, msg=self.mavlinkReceiver.wait_message()
             except:
                 print "error in wait_message"
 
             if msg_key=='':
-              return
+              	return
            #print "updating tree: ",msg_key
             msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
 

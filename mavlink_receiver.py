@@ -22,7 +22,7 @@ from pymavlink import pymavlink
 from optparse import OptionParser
 
 class MAVlinkReceiver:
-    def __init__(self):
+    def __init__(self, threading=True):
         parser = OptionParser("mavue.py [options]")
 
         parser.add_option("--baudrate", dest="baudrate", type='int',
@@ -36,6 +36,8 @@ class MAVlinkReceiver:
         (opts, args) = parser.parse_args()
         self.opts=opts
         self.serialPorts=self.scanForSerials()
+	self.threading=threading
+
         print "auto-detected serial ports:"
         for s in self.serialPorts:
             print s.device
@@ -60,15 +62,14 @@ class MAVlinkReceiver:
         #open log file for data logging
         if opts.logfile_raw!="":
             self.master.logfile_raw=open(opts.logfile_raw,  'w',  0)
-            
-            
-        self.messageQueue=Queue()
-        
+                    
         self.msg=None;
         self.messages=dict();
- 
-        self.receiveThread=Thread(target=self.messageReceiveThread)
-        self.receiveThread.start()
+
+ 	if threading:
+	        self.messageQueue=Queue()
+	        self.receiveThread=Thread(target=self.messageReceiveThread)
+	        self.receiveThread.start()
     
         self.earthserver=None
         #self.earthserver=GoogleEarthServer()
@@ -115,18 +116,19 @@ class MAVlinkReceiver:
             time.sleep(0.000001)
     
     def messagesAvailable(self):
-        return not self.messageQueue.empty()
+        return not self.threading or not self.messageQueue.empty()
     
     def wait_message(self):
         if self.master==None:
             return "", None
 
-        '''wait for a heartbeat so we know the target system IDs'''
-        #msg = self.master.recv_msg()
-        try:
-            msg=self.messageQueue.get(True,  0.1)
-        except Empty:
-            return "", None;
+	if self.threading:
+	    try:
+	        msg=self.messageQueue.get(True,  0.1)
+	    except Empty:
+	        return "", None;
+  	else:
+	    msg = self.master.recv_msg()
             
         # tag message with this instance of the receiver:
         msg_key=""
@@ -165,8 +167,8 @@ class MAVlinkReceiver:
                 #if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
                 #    return "", None; 
 
-            if msg.__class__.__name__=="MAVLink_statustext_message":
-                print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
+            #if msg.__class__.__name__=="MAVLink_statustext_message":
+            #    print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
 
             msg.key=msg_key
             return msg_key,  msg;
@@ -176,10 +178,22 @@ class MAVlinkReceiver:
         print "detecting serial ports..."
         return mavutil.auto_detect_serial(['*ttyUSB*',  '*ttyACM*', '*tty.usb*'])
 
-#rcv=MAVlinkReceiver();
-# wait for the heartbeat msg to find the system ID
-#while True:
-#   rcv.wait_message()
-#   for m in rcv.messages.keys():
-#      print m, rcv.messages[m].get_fieldnames()  
+
+if __name__ == '__main__':
+	rcv=MAVlinkReceiver();
+	log_counter=1
+	# wait for the heartbeat msg to find the system ID
+	while True:
+		msg_key, msg=rcv.wait_message()
+		if msg_key!='':
+		#	print msg_key
+			#if msg.__class__.__name__=="MAVLink_global_position_int_message":
+	                #    print getattr(msg,  "lon")/10000000.0,  getattr(msg,  "lat")/10000000.0,  getattr(msg,  "alt")/1000.0
+			if msg.__class__.__name__=="MAVLink_statustext_message" and msg._header.srcComponent==10 and getattr(msg,  "text").startswith("adding task LED"):
+				if rcv.opts.logfile_raw!="":
+					new_log=rcv.opts.logfile_raw + "%04d" % log_counter
+					log_counter+=1
+					print "New powerup detected - starting new output logfile:", new_log
+					oldfile=rcv.master.logfile_raw
+					rcv.master.logfile_raw=open(new_log,  'w',  0)
 
