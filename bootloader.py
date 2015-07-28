@@ -50,6 +50,9 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA]=TextParameter(parent=self, name="Application address", value=0,  editable=False,  formatString="0x{:02X}")
         self.processorInfoLength[mb.BOOT_PROTECTED_BOOT_AREA]=TextParameter(parent=self, name="Bootloader size", value=0,  editable=False,  formatString="{:d}")
         
+        self.parallelPackets = NumericalParameter(parent=self, name="transmit parallel packets", value=5,  min=1,  max=10,  editable=True)
+        self.sendInterval = NumericalParameter(parent=self, name="send interval", value=10,  min=1,  max=50,  step=1,  editable=True)
+
         self.getInfo=ActionParameter(parent=self,  name='Get Info',  callback=self.getDeviceInfo)
         self.flashFile=FileParameter(parent=self,  name="HEX file",  fileSelectionPattern="HEX files (*.hex)",  callback=self.openHexFile)
         self.readFlash=ActionParameter(parent=self,  name='Read Flash',  callback=self.readFlash)
@@ -59,23 +62,24 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.transferProgress=ProgressParameter(parent=self,  name='Transfer',  min=0,  max=100,  value=0)
         self.reset=ActionParameter(parent=self,  name='Reset',  callback=self.sendResetCommand)
 
-        self.burst_count=4
 
         self.parameters=[self.name,  
                                     self.getInfo,  
-                                    self.processorInfo[mb.BOOT_PROCESSOR_MODEL],  
-                                    self.processorInfo[mb.BOOT_PROCESSOR_ID], 
-                                    self.processorInfo[mb.BOOT_PAGE_SIZE], 
-                                    self.processorInfo[mb.BOOT_FLASH_ADDRESS], 
-                                    self.processorInfoLength[mb.BOOT_FLASH_ADDRESS], 
-                                    self.processorInfo[mb.BOOT_RAM_ADDRESS], 
-                                    self.processorInfoLength[mb.BOOT_RAM_ADDRESS], 
-                                    self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA],  
-                                    self.processorInfoLength[mb.BOOT_PROTECTED_BOOT_AREA], 
+                                    #self.processorInfo[mb.BOOT_PROCESSOR_MODEL],  
+                                    #self.processorInfo[mb.BOOT_PROCESSOR_ID], 
+                                    #self.processorInfo[mb.BOOT_PAGE_SIZE], 
+                                    #self.processorInfo[mb.BOOT_FLASH_ADDRESS], 
+                                    #self.processorInfoLength[mb.BOOT_FLASH_ADDRESS], 
+                                    #self.processorInfo[mb.BOOT_RAM_ADDRESS], 
+                                    #self.processorInfoLength[mb.BOOT_RAM_ADDRESS], 
+                                    #self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA],  
+                                    #self.processorInfoLength[mb.BOOT_PROTECTED_BOOT_AREA], 
+                                    self.parallelPackets, 
+                                    self.sendInterval, 
                                     self.flashFile, 
-                                    self.readFlash,  
+                                    #self.readFlash,  
                                     self.writeFlash, 
-                                    self.verifyFlash,
+                                    #self.verifyFlash,
                                     self.startApp, 
                                     self.transferProgress, 
                                     self.reset]
@@ -217,8 +221,9 @@ class DeviceActions(ItemWithParameters,  Plugin):
                     # append transmitted message IDs to list for checking the acknowledgements
                     sentMessages.append(self.messageCounter)
                     self.messageCounter+=1
-                    time.sleep(0.02)
-                    if len(sentMessages)>=self.burst_count:
+                    time.sleep(self.sendInterval.getValue()/1000.0)
+                    # check how many packets to send before waiting for acks:
+                    if len(sentMessages)>=int(self.parallelPackets.getValue()):
                         break;
                 #print "sent:",   ["%i"%b for b in sentMessages]
                 # check if we received all acknowledgements

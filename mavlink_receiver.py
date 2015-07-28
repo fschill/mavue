@@ -167,8 +167,8 @@ class MAVlinkReceiver:
                 #if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
                 #    return "", None; 
 
-            #if msg.__class__.__name__=="MAVLink_statustext_message":
-            #    print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
+            if msg.__class__.__name__=="MAVLink_statustext_message":
+                print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
 
             msg.key=msg_key
             return msg_key,  msg;
