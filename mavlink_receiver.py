@@ -4,7 +4,7 @@
 test mavlink messages
 '''
 
-import sys, struct, time, os
+import sys, time, os
 #from curses import ascii
 from googleearth_server import *
 from multiprocessing import   Queue
@@ -36,7 +36,7 @@ class MAVlinkReceiver:
         (opts, args) = parser.parse_args()
         self.opts=opts
         self.serialPorts=self.scanForSerials()
-	self.threading=threading
+        self.threading=threading
 
         print "auto-detected serial ports:"
         for s in self.serialPorts:
@@ -58,25 +58,25 @@ class MAVlinkReceiver:
         print "with MAVlink dialect '",  opts.dialect, "'"
         print ""
         self.master = mavutil.mavlink_connection(opts.device, baud=opts.baudrate, source_system=opts.SOURCE_SYSTEM,  write=True,  dialect=opts.dialect,  notimestamps=opts.notimestamps)
-        
+
         #open log file for data logging
         if opts.logfile_raw!="":
             self.master.logfile_raw=open(opts.logfile_raw,  'w',  0)
-                    
+
         self.msg=None;
         self.messages=dict();
 
- 	if threading:
-	        self.messageQueue=Queue()
-	        self.receiveThread=Thread(target=self.messageReceiveThread)
-	        self.receiveThread.start()
-    
-        self.earthserver=None
-        #self.earthserver=GoogleEarthServer()
-        if self.earthserver!=None:
-            self.earthserver.run()
-        
-        self.requestAllStreams()
+        if threading:
+            self.messageQueue=Queue()
+            self.receiveThread=Thread(target=self.messageReceiveThread)
+            self.receiveThread.start()
+
+            self.earthserver=None
+            #self.earthserver=GoogleEarthServer()
+            if self.earthserver!=None:
+                self.earthserver.run()
+
+            self.requestAllStreams()
 
     def reopenDevice(self, device):
         print ""
@@ -104,7 +104,7 @@ class MAVlinkReceiver:
         print "Requesting all streams from ",  self.master.target_system,  self.master.target_component
         reqMsg=pymavlink.MAVLink_request_data_stream_message(target_system=self.master.target_system, target_component=0, req_stream_id=255, req_message_rate=0, start_stop=0)
         self.master.write(reqMsg.pack(pymavlink.MAVLink(file=0,  srcSystem=self.master.source_system)))
-        
+
         #time.sleep(0.1)
         print "Requesting all parameters",  self.master.target_system,  self.master.target_component
         self.master.param_fetch_all()
@@ -114,27 +114,27 @@ class MAVlinkReceiver:
             msg = self.master.recv_msg()
             self.messageQueue.put(msg)
             time.sleep(0.000001)
-    
+
     def messagesAvailable(self):
         return not self.threading or not self.messageQueue.empty()
-    
+
     def wait_message(self):
         if self.master==None:
             return "", None
 
-	if self.threading:
-	    try:
-	        msg=self.messageQueue.get(True,  0.1)
-	    except Empty:
-	        return "", None;
-  	else:
-	    msg = self.master.recv_msg()
-            
+        if self.threading:
+            try:
+                msg=self.messageQueue.get(True,  0.1)
+            except Empty:
+                return "", None;
+        else:
+            msg = self.master.recv_msg()
+
         # tag message with this instance of the receiver:
         msg_key=""
         if msg!=None and msg.__class__.__name__!="MAVLink_bad_data":
             msg.mavlinkReceiver=self
-            
+
             msg_key="%s:%s"%(msg.get_srcSystem(),  msg.__class__.__name__)
             self.messages[msg.__class__.__name__]=msg
             self.msg=msg
@@ -155,20 +155,20 @@ class MAVlinkReceiver:
                 msg_key="%s:%s:%s"%(msg.get_srcSystem(),  msg.__class__.__name__, msg.stream_id)
                 block_size=len(msg.values)
                 all_values=[0 for x in range(0, msg.packets_per_block*block_size)]
-                
+
                 if msg_key in self.messages:
                     all_values=self.messages[msg_key].values
-                
+
                 for i in range(0, block_size):
                     all_values[i+ msg.packet_id*block_size]=msg.values[i]
-                    
+
                 msg.values=all_values
                 self.messages[msg_key]=msg
                 #if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
                 #    return "", None; 
 
-            if msg.__class__.__name__=="MAVLink_statustext_message":
-                print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
+            #if msg.__class__.__name__=="MAVLink_statustext_message":
+            #    print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
 
             msg.key=msg_key
             return msg_key,  msg;
@@ -180,20 +180,20 @@ class MAVlinkReceiver:
 
 
 if __name__ == '__main__':
-	rcv=MAVlinkReceiver();
-	log_counter=1
-	# wait for the heartbeat msg to find the system ID
-	while True:
-		msg_key, msg=rcv.wait_message()
-		if msg_key!='':
-		#	print msg_key
-			#if msg.__class__.__name__=="MAVLink_global_position_int_message":
-	                #    print getattr(msg,  "lon")/10000000.0,  getattr(msg,  "lat")/10000000.0,  getattr(msg,  "alt")/1000.0
-			if msg.__class__.__name__=="MAVLink_statustext_message" and msg._header.srcComponent==10 and getattr(msg,  "text").startswith("adding task LED"):
-				if rcv.opts.logfile_raw!="":
-					new_log=rcv.opts.logfile_raw + "%04d" % log_counter
-					log_counter+=1
-					print "New powerup detected - starting new output logfile:", new_log
-					oldfile=rcv.master.logfile_raw
-					rcv.master.logfile_raw=open(new_log,  'w',  0)
+    rcv=MAVlinkReceiver();
+    log_counter=1
+    # wait for the heartbeat msg to find the system ID
+    while True:
+        msg_key, msg=rcv.wait_message()
+        if msg_key!='':
+        #	print msg_key
+        #if msg.__class__.__name__=="MAVLink_global_position_int_message":
+        #    print getattr(msg,  "lon")/10000000.0,  getattr(msg,  "lat")/10000000.0,  getattr(msg,  "alt")/1000.0
+            if msg.__class__.__name__=="MAVLink_statustext_message" and msg._header.srcComponent==10 and getattr(msg,  "text").startswith("adding task LED"):
+                if rcv.opts.logfile_raw!="":
+                    new_log=rcv.opts.logfile_raw + "%04d" % log_counter
+                    log_counter+=1
+                    print "New powerup detected - starting new output logfile:", new_log
+                    oldfile=rcv.master.logfile_raw
+                    rcv.master.logfile_raw=open(new_log,  'w',  0)
 

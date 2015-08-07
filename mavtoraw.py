@@ -39,20 +39,25 @@ import mavlink_receiver
 import pickle
 import time
 
-
+import mavutil
 
 
 if __name__ == '__main__':
 	mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=False)
 
+	mavForwarder = mavutil.mavlink_connection(device="udp:localhost:14549", source_system=1,  write=True)
+	mavForwarder.last_address=('127.0.0.1', 14550)
 	log_counter=1
 
 	while True:
 		msg = mavlinkReceiver.master.recv_msg()
 		if msg!=None and msg.__class__.__name__!="MAVLink_bad_data":
 			contents=[(fn, getattr(msg, fn)) for fn in msg.get_fieldnames()]
-			print str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"):", contents
-
+			print str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"):", msg.__class__.__name__,contents
+			try:
+				mavForwarder.mav.send(msg)
+			except:
+				print "error forwarding"
 			if msg.__class__.__name__=="MAVLink_statustext_message" and msg._header.srcComponent==10 and getattr(msg,  "text").startswith("adding task LED"):
 				if mavlinkReceiver.opts.logfile_raw!="":
 					new_log=mavlinkReceiver.opts.logfile_raw + "%04d" % log_counter

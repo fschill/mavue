@@ -1,4 +1,4 @@
-from pyqtgraph.Qt import QtGui, QtCore
+from pyqtgraph.Qt import QtGui
 from gui_elements import *
 from abstractparameters import *
 
@@ -50,8 +50,8 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA]=TextParameter(parent=self, name="Application address", value=0,  editable=False,  formatString="0x{:02X}")
         self.processorInfoLength[mb.BOOT_PROTECTED_BOOT_AREA]=TextParameter(parent=self, name="Bootloader size", value=0,  editable=False,  formatString="{:d}")
         
-        self.parallelPackets = NumericalParameter(parent=self, name="transmit parallel packets", value=5,  min=1,  max=10,  editable=True)
-        self.sendInterval = NumericalParameter(parent=self, name="send interval", value=10,  min=1,  max=50,  step=1,  editable=True)
+        self.parallelPackets = NumericalParameter(parent=self, name="transmit parallel packets", value=10,  min=1,  max=10,  editable=True)
+        self.sendInterval = NumericalParameter(parent=self, name="send interval", value=8,  min=1,  max=50,  step=1,  editable=True)
 
         self.getInfo=ActionParameter(parent=self,  name='Get Info',  callback=self.getDeviceInfo)
         self.flashFile=FileParameter(parent=self,  name="HEX file",  fileSelectionPattern="HEX files (*.hex)",  callback=self.openHexFile)

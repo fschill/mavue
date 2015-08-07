@@ -790,6 +790,7 @@ class mavudp(mavfile):
     def recv(self,n=None):
         try:
             data, self.last_address = self.port.recvfrom(128)
+            print self.last_address
         except socket.error as e:
             if e.errno in [ errno.EAGAIN, errno.EWOULDBLOCK, errno.ECONNREFUSED ]:
                 return ""
