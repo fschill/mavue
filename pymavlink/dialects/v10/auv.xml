@@ -62,16 +62,17 @@
                <entry value="20" name="BOOT_START_REPROGRAM"><description>initiates flash upload session</description></entry>
                <entry value="21" name="BOOT_END_REPROGRAM"><description>ends flash upload session</description></entry>
                <entry value="22" name="BOOT_WRITE_TO_BUFFER"><description>BOOTLOADER_DATA: write data to internal page buffer</description></entry>
-               <entry value="23" name="BOOT_WRITE_BUFFER_TO_FLASH"><description>BOOTLOADER_CMD: write page buffer contents to flash page at given address</description></entry>
+               <entry value="23" name="BOOT_WRITE_BUFFER_TO_FLASH"><description>BOOTLOADER_CMD: write page buffer contents to flash page at given address. Returns ACK with address, and length=CRC16 of written data.</description></entry>
                <entry value="24" name="BOOT_WRITE_BUFFER_TO_USERPAGE"><description>BOOTLOADER_CMD: write page buffer contents to user page or internal eeprom at relative address</description></entry>
-               <entry value="25" name="BOOT_READ_MEMORY"><description>Request data at given memory address </description></entry>
-               <entry value="26" name="BOOT_READ_FUSES"><description>Response: BOOTLOADER_CMD with param_address = fuse bytes</description></entry>
-               <entry value="27" name="BOOT_WRITE_FUSES"><description>Set fuse bytes to value in param_address</description></entry>
-               <entry value="28" name="BOOT_READ_REGISTERS"><description>Response: BOOTLOADER_DATA with register dump</description></entry>
-               <entry value="29" name="BOOT_READ_STACKPOINTER"><description>Response: BOOTLOADER_CMD with stackpointer value in param_address</description></entry>
-               <entry value="30" name="BOOT_READ_STACK"><description>Response: BOOTLOADER_DATA with stack dump of param_length</description></entry>
-               <entry value="31" name="BOOT_DEBUG_PAUSE"><description>pause execution and enter debug mode</description></entry>
-               <entry value="32" name="BOOT_DEBUG_CONTINUE"><description>continue execution</description></entry>
+               <entry value="25" name="BOOT_READ_MEMORY"><description>Request data at given memory address with given length</description></entry>
+               <entry value="26" name="BOOT_VERIFY_MEMORY"><description>Request CRC16 of data at given memory address and length. Returns ACK with address, and length=CRC16 of written data.</description></entry>
+               <entry value="27" name="BOOT_READ_FUSES"><description>Response: BOOTLOADER_CMD with param_address = fuse bytes</description></entry>
+               <entry value="28" name="BOOT_WRITE_FUSES"><description>Set fuse bytes to value in param_address</description></entry>
+               <entry value="29" name="BOOT_READ_REGISTERS"><description>Response: BOOTLOADER_DATA with register dump</description></entry>
+               <entry value="30" name="BOOT_READ_STACKPOINTER"><description>Response: BOOTLOADER_CMD with stackpointer value in param_address</description></entry>
+               <entry value="31" name="BOOT_READ_STACK"><description>Response: BOOTLOADER_DATA with stack dump of param_length</description></entry>
+               <entry value="32" name="BOOT_DEBUG_PAUSE"><description>pause execution and enter debug mode</description></entry>
+               <entry value="33" name="BOOT_DEBUG_CONTINUE"><description>continue execution</description></entry>
 
                <entry value="128" name="ACK_FLAG"><description></description></entry>
 

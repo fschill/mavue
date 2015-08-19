@@ -15,13 +15,21 @@ from pymavlink.generator.mavcrc import x25crc
 
 
 class PageBlock:
-    def __init__(self,  addr=0,  data=[],  length=0,  checksum=0):
+    def __init__(self,  addr=0,  data=[],  length=0, retries = 3):
         self.addr=addr
         self.data=data
         self.length=length
-        self.checksum=checksum
+        self.checksum = x25crc(str(bytearray(data)))
         self.messageCounter=0
         self.ack=0
+        self.retries = retries
+
+    def getCRC(self):
+        return self.checksum.crc
+
+    def padChecksum(self, total_length, value):
+        for i in range(self.length, total_length):
+            self.checksum.accumulate(str([value]))
 
 class DeviceActions(ItemWithParameters,  Plugin):
     def __init__(self,  name=None,  mavlinkInterface=None,  sysid=255,  compid=255,  boardname="",    **kwargs):
@@ -51,8 +59,8 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA]=TextParameter(parent=self, name="Application address", value=0,  editable=False,  formatString="0x{:02X}")
         self.processorInfoLength[mb.BOOT_PROTECTED_BOOT_AREA]=TextParameter(parent=self, name="Bootloader size", value=0,  editable=False,  formatString="{:d}")
         
-        self.parallelPackets = NumericalParameter(parent=self, name="transmit parallel packets", value=12,  min=1,  max=15,  editable=True)
-        self.sendInterval = NumericalParameter(parent=self, name="send interval", value=1,  min=0,  max=50,  step=1,  editable=True)
+        self.parallelPackets = NumericalParameter(parent=self, name="transmit parallel packets", value=12,  min=1,  max=15, step=1,  editable=True)
+        self.sendInterval = NumericalParameter(parent=self, name="send interval", value=8,  min=0,  max=50,  step=1,  editable=True)
 
         self.getInfo=ActionParameter(parent=self,  name='Get Info',  callback=self.getDeviceInfo)
         self.flashFile=FileParameter(parent=self,  name="HEX file",  fileSelectionPattern="HEX files (*.hex)",  callback=self.openHexFile)
@@ -122,6 +130,8 @@ class DeviceActions(ItemWithParameters,  Plugin):
                 self.processorInfo[base_command].updateValue(message.data[:message.data_length])
 
 
+    #def sendCommand(self):
+
     def getDeviceInfo(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,  self.messageCounter,   mb.BOOT_GET_PROCESSOR_INFORMATION, 0, 0, 0)
         self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
@@ -185,6 +195,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                     print "Wrong ACK to START_REPROGRAM",  receivedAck.CMD
                 if receivedAck.error_id!=0:
                     print "error entering programming mode",  receivedAck.error_id
+                    
             except Empty:
                 print "Failed to enter programming mode"
             except:
@@ -196,9 +207,13 @@ class DeviceActions(ItemWithParameters,  Plugin):
             # break up page into 32 byte blocks
             pageCounter=0
             pageAddress=addr - (addr%pageSize)
-            pageChecksum=x25crc("")
+            #pageChecksum=x25crc("")
             sentMessages=[]
-            
+            data = binaryData[pageAddress - startAddress:min(pageAddress -startAddress + pageSize, endAddress)]
+            currentPage = PageBlock(pageAddress, data, len(data))
+            # erased flash pages are filled with 0xFF which will be included in the bootloader CRC
+            currentPage.padChecksum(pageSize, 0xFF)
+
             #collect all blocks for the current page:
             blocks=[]
             while (pageAddress==addr - (addr%pageSize) and addr<endAddress):
@@ -207,10 +222,9 @@ class DeviceActions(ItemWithParameters,  Plugin):
                 data=[0 for x in range(0,  32)]
                 for i in range (0,  length):
                     data[i]=binaryData[addr-startAddress +i]
-                    #checksum+=(data[i]) %256
-                checksum = x25crc(str(bytearray(data))).crc
-                pageChecksum.accumulate(str(bytearray(data)))
-                new_block=PageBlock(addr,  data, length,  checksum)
+
+                new_block=PageBlock(addr,  data, length)
+                #pageChecksum.accumulate(str(bytearray(data)))
                 blocks.append(new_block)
                 addr+=32
                 
@@ -254,8 +268,8 @@ class DeviceActions(ItemWithParameters,  Plugin):
                         if receivedAck.error_id!=0:
                             print "write error:",  receivedAck.error_id,  "ret. addr:",  "%02X"%receivedAck.param_address
                             repeat_tries-=1
-                        if receivedAck.param_length!=int(ackBlock.checksum):
-                            print "checksum error:",  receivedAck.param_length,  "vs",  ackBlock.checksum
+                        if receivedAck.param_length!=int(ackBlock.getCRC()):
+                            print "checksum error:",  receivedAck.param_length,  "vs",  ackBlock.getCRC()
                             repeat_tries-=1
                         # ACK is fine - progress to next block
                         #print "."
@@ -294,8 +308,8 @@ class DeviceActions(ItemWithParameters,  Plugin):
                     print "error writing flash page:",  receivedAck.error_id,  "%02X"%receivedAck.param_address,  "%02X"% pageAddress
                     #self.ack_msg_queue=None
                     return
-                if receivedAck.param_length!=pageChecksum.crc:
-                    print "flash page checksum error:",   "%02X"%receivedAck.param_length,  "%02X"% pageChecksum.crc
+                if receivedAck.param_length!=currentPage.getCRC():
+                    print "flash page checksum error:",   "%02X"%receivedAck.param_length,  "%02X"% currentPage.getCRC()
                 # page write successful
                 #print "success writing flash page:",  "remote %02X"%receivedAck.param_address,  "local %02X"% pageAddress, "chk %02X"%receivedAck.param_length,  " (%02X)"% pageChecksum                
                 pageCounter+=1
