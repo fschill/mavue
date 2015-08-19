@@ -11,6 +11,7 @@ from Queue import Empty
 import time
 import sys
 import traceback
+from pymavlink.generator.mavcrc import x25crc
 
 
 class PageBlock:
@@ -195,7 +196,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
             # break up page into 32 byte blocks
             pageCounter=0
             pageAddress=addr - (addr%pageSize)
-            pageChecksum=0
+            pageChecksum=x25crc("")
             sentMessages=[]
             
             #collect all blocks for the current page:
@@ -206,11 +207,14 @@ class DeviceActions(ItemWithParameters,  Plugin):
                 data=[0 for x in range(0,  32)]
                 for i in range (0,  length):
                     data[i]=binaryData[addr-startAddress +i]
-                    checksum+=(data[i]) %256
+                    #checksum+=(data[i]) %256
+                checksum = x25crc(str(bytearray(data))).crc
+                pageChecksum.accumulate(str(bytearray(data)))
                 new_block=PageBlock(addr,  data, length,  checksum)
                 blocks.append(new_block)
                 addr+=32
                 
+            
             while len(blocks)>0:
                 sentMessages=[]
                 for b in blocks:
@@ -255,7 +259,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                             repeat_tries-=1
                         # ACK is fine - progress to next block
                         #print "."
-                        pageChecksum+=ackBlock.checksum
+                        
                         blocks.remove(ackBlock)
                         repeat_tries=5
                     except Empty:
@@ -290,8 +294,8 @@ class DeviceActions(ItemWithParameters,  Plugin):
                     print "error writing flash page:",  receivedAck.error_id,  "%02X"%receivedAck.param_address,  "%02X"% pageAddress
                     #self.ack_msg_queue=None
                     return
-                if receivedAck.param_length!=pageChecksum:
-                    print "flash page checksum error:",   "%02X"%receivedAck.param_length,  "%02X"% pageChecksum
+                if receivedAck.param_length!=pageChecksum.crc:
+                    print "flash page checksum error:",   "%02X"%receivedAck.param_length,  "%02X"% pageChecksum.crc
                 # page write successful
                 #print "success writing flash page:",  "remote %02X"%receivedAck.param_address,  "local %02X"% pageAddress, "chk %02X"%receivedAck.param_length,  " (%02X)"% pageChecksum                
                 pageCounter+=1
