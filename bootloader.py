@@ -165,24 +165,70 @@ class DeviceActions(ItemWithParameters,  Plugin):
             self.ack_msg_queue.get()
         #self.writeFlashThread()
 
-    # thread for memory transfers, connected to received ACK messages via a queue
-    def writeFlashThread(self):
-        repeat_tries=5
-        
+    def loadPages(self):
         startAddress=self.hexObject.minaddr()
             
         endAddress=self.hexObject.maxaddr()
         pageSize=int(self.processorInfo[mb.BOOT_PAGE_SIZE].value)
         
-        binsize=endAddress-startAddress
         binaryData=self.hexObject.tobinarray(startAddress,  endAddress)
+        addr=startAddress
         
-        startTime=time.time()
         print "%0.2X - %0.2X" %(startAddress,  endAddress),  pageSize
         addr=startAddress
         if addr<self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA].value:
             addr=self.processorInfo[mb.BOOT_PROTECTED_BOOT_AREA].value
             print "skipping boot area to %0.2X" %  addr
+            
+        pages = []
+        while addr<endAddress:
+            pageAddress=addr - (addr%pageSize)
+            data = binaryData[pageAddress - startAddress:min(pageAddress -startAddress + pageSize, endAddress)]
+            currentPage = PageBlock(pageAddress, data, len(data))
+            # erased flash pages are filled with 0xFF which will be included in the bootloader CRC
+            currentPage.padChecksum(pageSize, 0xFF)
+            pages.append(currentPage)
+            addr += pageSize
+        return pages
+
+    def verifyPageCRC(self,  currentPage):
+        pageSize=int(self.processorInfo[mb.BOOT_PAGE_SIZE].value)
+
+        # send a request for a flash page CRC:
+        msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_VERIFY_MEMORY,  0,  currentPage.addr, pageSize)
+        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        try:
+            receivedAck=self.ack_msg_queue.get(True,  1.0)
+            if receivedAck.command == mb.BOOT_VERIFY_MEMORY | mb.ACK_FLAG:
+                if receivedAck.param_length == currentPage.getCRC():
+                    return True
+                else:
+                    return False
+            else:
+                print "Wrong ACK to VERIFY_MEMORY command",  receivedAck.CMD
+                return False
+        except Empty:
+            print "Failed communication during verify"
+            return False
+        except:
+            print  sys.exc_info()[0],  traceback.format_exc()
+            #self.ack_msg_queue=None
+            return False
+
+
+    # thread for memory transfers, connected to received ACK messages via a queue
+    def writeFlashThread(self):
+        repeat_tries=5
+        
+        startAddress=self.hexObject.minaddr()
+        endAddress=self.hexObject.maxaddr()
+        pageSize=int(self.processorInfo[mb.BOOT_PAGE_SIZE].value)
+        
+        binsize=endAddress-startAddress
+        
+        pageList = self.loadPages()
+        
+        startTime=time.time()
 
         for i in range(0, 3):
            #enter programming mode
@@ -195,7 +241,8 @@ class DeviceActions(ItemWithParameters,  Plugin):
                     print "Wrong ACK to START_REPROGRAM",  receivedAck.CMD
                 if receivedAck.error_id!=0:
                     print "error entering programming mode",  receivedAck.error_id
-                    
+                print "entering programming mode"
+                break
             except Empty:
                 print "Failed to enter programming mode"
             except:
@@ -203,131 +250,128 @@ class DeviceActions(ItemWithParameters,  Plugin):
                 #self.ack_msg_queue=None
                 return
 
-        while addr<endAddress:
+        while len(pageList) > 0:
             # break up page into 32 byte blocks
-            pageCounter=0
-            pageAddress=addr - (addr%pageSize)
-            #pageChecksum=x25crc("")
-            sentMessages=[]
-            data = binaryData[pageAddress - startAddress:min(pageAddress -startAddress + pageSize, endAddress)]
-            currentPage = PageBlock(pageAddress, data, len(data))
-            # erased flash pages are filled with 0xFF which will be included in the bootloader CRC
-            currentPage.padChecksum(pageSize, 0xFF)
+            currentPage = pageList[0]
+    
+            pageVerified = self.verifyPageCRC(currentPage)
 
             #collect all blocks for the current page:
             blocks=[]
-            while (pageAddress==addr - (addr%pageSize) and addr<endAddress):
-                length=min(32,  endAddress-addr)
-                checksum=0
-                data=[0 for x in range(0,  32)]
-                for i in range (0,  length):
-                    data[i]=binaryData[addr-startAddress +i]
+            address_offset = 0
+            if pageVerified:
+                #print "skipping: page verified"
+                pageList=pageList[1:]
 
-                new_block=PageBlock(addr,  data, length)
-                #pageChecksum.accumulate(str(bytearray(data)))
-                blocks.append(new_block)
-                addr+=32
-                
+            else:
+                while (address_offset  < currentPage.length):
+                    length=min(32,  currentPage.length - address_offset)
+                    data = currentPage.data[address_offset:address_offset+length]
+                    while len(data)<32:
+                        data.append(0xff)
+
+                    new_block=PageBlock(currentPage.addr + address_offset,  data, length)
+                    blocks.append(new_block)
+                    address_offset+=32
             
-            while len(blocks)>0:
-                sentMessages=[]
-                for b in blocks:
-                    b.messageCounter=self.messageCounter
-                    #print "sending ",   "%02X"% b.addr
-                    msg = mb.MAVLink_bootloader_data_message(self.sysid, self.compid,   b.messageCounter,  mb.BOOT_WRITE_TO_BUFFER,  b.addr,  b.length, b.data)
-                    self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
-                    # append transmitted message IDs to list for checking the acknowledgements
-                    sentMessages.append(self.messageCounter)
-                    self.messageCounter+=1
-                    time.sleep(self.sendInterval.getValue()/1000.0)
-                    # check how many packets to send before waiting for acks:
-                    if len(sentMessages)>=int(self.parallelPackets.getValue()):
-                        break;
-                #print "sent:",   ["%i"%b for b in sentMessages]
-                # check if we received all acknowledgements
-                while len(sentMessages)>0:
-                    # wait for acknowledgement with a timeout of 0.5 seconds
-                   # print "waiting for ack"
-                    try:
-                        receivedAck=self.ack_msg_queue.get(True,  0.5)
-                        recId=receivedAck.session_message_counter
-                        #print "recv: %02X"%receivedAck.param_address
-                        if recId in sentMessages:  # ack with correct sequence received?
-                            sentMessages.remove(recId)
-                        else:
-                            print "received out-of-order session_message_counter! Aborting."
-                            self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
+                while len(blocks)>0:
+                    sentMessages=[]
+                    for b in blocks:
+                        b.messageCounter=self.messageCounter
+                        #print "sending ",   "%02X"% b.addr
+                        msg = mb.MAVLink_bootloader_data_message(self.sysid, self.compid,   b.messageCounter,  mb.BOOT_WRITE_TO_BUFFER,  b.addr,  b.length, b.data)
+                        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+                        # append transmitted message IDs to list for checking the acknowledgements
+                        sentMessages.append(self.messageCounter)
+                        self.messageCounter+=1
+                        time.sleep(self.sendInterval.getValue()/1000.0)
+                        # check how many packets to send before waiting for acks:
+                        if len(sentMessages)>=int(self.parallelPackets.getValue()):
+                            break;
+                    #print "sent:",   ["%i"%b for b in sentMessages]
+                    # check if we received all acknowledgements
+                    while len(sentMessages)>0:
+                        # wait for acknowledgement with a timeout of 0.5 seconds
+                       # print "waiting for ack"
+                        try:
+                            receivedAck=self.ack_msg_queue.get(True,  0.5)
+                            recId=receivedAck.session_message_counter
+                            #print "recv: %02X"%receivedAck.param_address
+                            if recId in sentMessages:  # ack with correct sequence received?
+                                sentMessages.remove(recId)
+                            else:
+                                print "received out-of-order session_message_counter! Aborting."
+                                self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
+                                return
+
+                            ackBlock=None
+                            #find corresponding block
+                            for b in blocks:
+                                if b.messageCounter==receivedAck.session_message_counter:
+                                    ackBlock=b
+                                
+                            if receivedAck.error_id!=0:
+                                print "write error:",  receivedAck.error_id,  "ret. addr:",  "%02X"%receivedAck.param_address
+                                repeat_tries-=1
+                            if receivedAck.param_length!=int(ackBlock.getCRC()):
+                                print "checksum error:",  receivedAck.param_length,  "vs",  ackBlock.getCRC()
+                                repeat_tries-=1
+                            # ACK is fine - progress to next block
+                            #print "."
+                            
+                            blocks.remove(ackBlock)
+                            repeat_tries=5
+                        except Empty:
+                            print "Bootloader not responding! Addr: %02X ,  retrying:"%addr,  repeat_tries,  ["%02X"%b.addr for b in blocks]
+                            repeat_tries-=1
+                            break
+
+                            #self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
+                            #return
+                        except:  # general error
+                            print  sys.exc_info()[0],  traceback.format_exc()
+                            #self.ack_msg_queue=None
                             return
 
-                        ackBlock=None
-                        #find corresponding block
-                        for b in blocks:
-                            if b.messageCounter==receivedAck.session_message_counter:
-                                ackBlock=b
-                            
-                        if receivedAck.error_id!=0:
-                            print "write error:",  receivedAck.error_id,  "ret. addr:",  "%02X"%receivedAck.param_address
-                            repeat_tries-=1
-                        if receivedAck.param_length!=int(ackBlock.getCRC()):
-                            print "checksum error:",  receivedAck.param_length,  "vs",  ackBlock.getCRC()
-                            repeat_tries-=1
-                        # ACK is fine - progress to next block
-                        #print "."
-                        
-                        blocks.remove(ackBlock)
-                        repeat_tries=5
-                    except Empty:
-                        print "Bootloader not responding! Addr: %02X ,  retrying:"%addr,  repeat_tries,  ["%02X"%b.addr for b in blocks]
-                        repeat_tries-=1
-                        break
-
-                        #self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
-                        #return
-                    except:  # general error
-                        print  sys.exc_info()[0],  traceback.format_exc()
+                    if repeat_tries<=0:
+                        print "Aborting."
                         #self.ack_msg_queue=None
                         return
-
-                if repeat_tries<=0:
-                    print "Aborting."
-                    #self.ack_msg_queue=None
-                    return
-            
                 
-            # page complete - send write to flash command
-            msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_WRITE_BUFFER_TO_FLASH,  0,  pageAddress, pageSize)
-            self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
-            try:
-                receivedAck=self.ack_msg_queue.get(True,  0.5)
-                
-                if receivedAck.command!= mb.BOOT_WRITE_BUFFER_TO_FLASH | mb.ACK_FLAG:
-                    print "error writing flash page - out of order ACK",  receivedAck.CMD
-                    #self.ack_msg_queue=None
-                    return
-                if receivedAck.error_id!=0:
-                    print "error writing flash page:",  receivedAck.error_id,  "%02X"%receivedAck.param_address,  "%02X"% pageAddress
-                    #self.ack_msg_queue=None
-                    return
-                if receivedAck.param_length!=currentPage.getCRC():
-                    print "flash page checksum error:",   "%02X"%receivedAck.param_length,  "%02X"% currentPage.getCRC()
-                # page write successful
-                #print "success writing flash page:",  "remote %02X"%receivedAck.param_address,  "local %02X"% pageAddress, "chk %02X"%receivedAck.param_length,  " (%02X)"% pageChecksum                
-                pageCounter+=1
                     
+                # page complete - send write to flash command
+                msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_WRITE_BUFFER_TO_FLASH,  0,  currentPage.addr, pageSize)
+                self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+                try:
+                    receivedAck=self.ack_msg_queue.get(True,  0.5)
+                    
+                    if receivedAck.command!= mb.BOOT_WRITE_BUFFER_TO_FLASH | mb.ACK_FLAG:
+                        print "error writing flash page - out of order ACK",  receivedAck.CMD
+                        #self.ack_msg_queue=None
+                        return
+                    if receivedAck.error_id!=0:
+                        print "error writing flash page:",  receivedAck.error_id,  "%02X"%receivedAck.param_address,  "%02X"% currentPage.addr
+                        #self.ack_msg_queue=None
+                        return
+                    if receivedAck.param_length!=currentPage.getCRC():
+                        print "flash page checksum error:",   "%02X"%receivedAck.param_length,  "%02X"% currentPage.getCRC()
+                    # page write successful
+                    #print "success writing flash page:",  "remote %02X"%receivedAck.param_address,  "local %02X"% currentPage.addr, "chk %02X"%receivedAck.param_length,  " (%02X)"% currentPage.getCRC()                
+                    pageList=pageList[1:]
 
-            except Empty:
-                print "Flash write: Bootloader not responding! trying again..."
-                self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
-                #self.ack_msg_queue=None
-                
-            except:
-                print  sys.exc_info()[0],  traceback.format_exc()
-                #self.ack_msg_queue=None
-                return
+                except Empty:
+                    print "Flash write: Bootloader not responding! trying again..."
+                    self.transferProgress.updateValue(value=startAddress,  min=startAddress,  max=endAddress)
+                    #self.ack_msg_queue=None
+                    
+                except:
+                    print  sys.exc_info()[0],  traceback.format_exc()
+                    #self.ack_msg_queue=None
+                    return
 
 
             #update progress bar
-            self.transferProgress.updateValue(value=addr+length,  min=startAddress,  max=endAddress)
+            self.transferProgress.updateValue(value=currentPage.addr,  min=startAddress,  max=endAddress)
         finishTime=time.time()
 
         self.transferProgress.updateValue(value=endAddress,  min=startAddress,  max=endAddress)
