@@ -322,7 +322,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                             blocks.remove(ackBlock)
                             repeat_tries=5
                         except Empty:
-                            print "Bootloader not responding! Addr: %02X ,  retrying:"%addr,  repeat_tries,  ["%02X"%b.addr for b in blocks]
+                            print "Bootloader not responding! Addr: %02X ,  retrying:"%currentPage.addr,  repeat_tries,  ["%02X"%b.addr for b in blocks]
                             repeat_tries-=1
                             break
 
