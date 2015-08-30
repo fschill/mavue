@@ -254,9 +254,12 @@ class DropPlot(QtGui.QWidget):
 
     def leaveEvent(self,  event):
         self.targets_area.setHidden(True)
+        
+    def mouseMoveEvent(self,  event):
+        print(event.pos())
 
-    #def mousePressEvent(self,  event):
-    #    self.targets_area.setHidden(False)
+    def mousePressEvent(self,  event):
+        self.targets_area.setHidden(False)
 
     def closeEvent(self,  event):
         while len(self.targets)>0:
