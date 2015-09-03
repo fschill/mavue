@@ -66,7 +66,7 @@ class Update_Thread():
         self.treeUpdateFrequency=1.0
         self.t = QtCore.QTimer()
         self.t.timeout.connect(self.update)
-        self.t.start(3)
+        self.t.start(1)
         self.plugin_manager=plugins.plugin_manager(self.plugin_callback)
         
     def plugin_callback(self,  msg):
