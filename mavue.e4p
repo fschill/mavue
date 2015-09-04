@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project mavue -->
-<!-- Saved: 2015-08-07, 03:56:27 -->
+<!-- Saved: 2015-09-04, 11:42:47 -->
 <!-- Copyright (C) 2015 ,  -->
 <Project version="5.1">
   <Language>en</Language>
@@ -16,10 +16,8 @@
   <Sources>
     <Source>pymavlink/fgFDM.py</Source>
     <Source>pymavlink/mavextra.py</Source>
-    <Source>pymavlink/scanwin32.py</Source>
     <Source>pymavlink/mavutil.py</Source>
     <Source>pymavlink/mavwp.py</Source>
-    <Source>pymavlink/pymavlink.py</Source>
     <Source>pymavlink/mavparm.py</Source>
     <Source>mavlink_receiver.py</Source>
     <Source>googleearth_server.py</Source>
@@ -32,9 +30,6 @@
     <Source>pymavlink/dialects/v10/__init__.py</Source>
     <Source>pymavlink/dialects/v09/__init__.py</Source>
     <Source>bootloader.py</Source>
-    <Source>pymavlink/dialects/v10/dbgextensions.py</Source>
-    <Source>pymavlink/dialects/v10/common.py</Source>
-    <Source>pymavlink/dialects/v10/auv.py</Source>
     <Source>abstractparameters.py</Source>
     <Source>intelhex/__init__.py</Source>
     <Source>intelhex/test.py</Source>
