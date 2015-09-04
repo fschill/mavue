@@ -451,13 +451,13 @@ class Bootloader(QtGui.QDialog,  Plugin):
 
     def getDeviceInfo(self):    
         msg = mb.MAVLink_bootloader_cmd_message(255, 255,  self.messageCounter,   mb.BOOT_GET_PROCESSOR_INFORMATION, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
 
 
     def sendResetCommand(self):    
         msg = mb.MAVLink_bootloader_cmd_message(255, 255, self.messageCounter, mb.BOOT_RESET, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
         
     def closeEvent(self,  event):
