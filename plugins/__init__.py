@@ -12,7 +12,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 import numpy 
 import pyqtgraph as pg
 import random
-import  mavutil
+from pymavlink import mavutil
 import time
 from  math import *
 

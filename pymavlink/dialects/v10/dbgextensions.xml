@@ -44,7 +44,7 @@
           </enum>
      </enums>
      <messages>
-          <message id="243" name="CAN_PACKET">
+          <message id="180" name="CAN_PACKET">
                <description>Encapsulation of individual CAN packets to tunnel through other streams</description>
                <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
                <field type="uint8_t" name="bus_id">identifier of the can bus</field>
@@ -54,7 +54,7 @@
                <field type="uint8_t[8]" name="values">raw sample values</field>
           </message>
 
-          <message id="244" name="RAW_DATA_STREAM_8">
+          <message id="181" name="RAW_DATA_STREAM_8">
                <description>Raw data stream (8-bit) or multi-packet arrays</description>
                <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
                <field type="uint8_t" name="stream_id">Stream ID</field>
@@ -64,7 +64,7 @@
                <field type="uint8_t[64]" name="values">raw sample values</field>
           </message>
 
-          <message id="245" name="RAW_DATA_STREAM_16">
+          <message id="182" name="RAW_DATA_STREAM_16">
                <description>Raw data stream (16-bit) or multi-packet arrays</description>
                <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
                <field type="uint8_t" name="stream_id">Stream ID</field>
@@ -73,7 +73,7 @@
                <field type="uint8_t" name="sample_count">Number of valid samples in this packet</field>
                <field type="int16_t[64]" name="values">raw sample values</field>
           </message>
-          <message id="246" name="RAW_DATA_STREAM_FLOAT">
+          <message id="183" name="RAW_DATA_STREAM_FLOAT">
                <description>Raw data stream (32-bit float) or multi-packet arrays</description>
                <field type="uint32_t" name="time_boot_ms">Timestamp (milliseconds since system boot)</field>
                <field type="uint8_t" name="stream_id">Stream ID</field>
@@ -83,7 +83,7 @@
                <field type="float[32]" name="values">raw sample values</field>
           </message>
 
-          <message id="247" name="BOOTLOADER_CMD">
+          <message id="200" name="BOOTLOADER_CMD">
                <description>Additional information on existing messages and commands</description>
                <field type="uint8_t" name="target_system">System which should execute the command</field>
                <field type="uint8_t" name="target_component">Component which should execute the command, 0 for all components</field>
@@ -94,7 +94,7 @@
                <field type="uint32_t" name="param_length"> Command parameter 2 or transfer length depending on command</field>
           </message>
 
-          <message id="248" name="BOOTLOADER_DATA">
+          <message id="201" name="BOOTLOADER_DATA">
                <description>Bootloader memory transfer (reading or writing) for flash or RAM transfers.</description>
                <field type="uint8_t" name="target_system">System which should execute the command</field>
                <field type="uint8_t" name="target_component">Component which should execute the command, 0 for all components</field>

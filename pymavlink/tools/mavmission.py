@@ -36,7 +36,12 @@ def mavmission(logfile):
                                                              0, 1,
                                                              m.Prm1, m.Prm2, m.Prm3, m.Prm4,
                                                              m.Lat, m.Lng, m.Alt)
+        if m.current >= 2:
+            continue
 
+        while m.seq > wp.count():
+            print("Adding dummy WP %u" % wp.count())
+            wp.set(m, wp.count())
         wp.set(m, m.seq)
     wp.save(args.output)
     print("Saved %u waypoints to %s" % (wp.count(), args.output))

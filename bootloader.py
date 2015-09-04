@@ -2,7 +2,7 @@ from pyqtgraph.Qt import QtGui
 from gui_elements import *
 from abstractparameters import *
 
-from pymavlink import pymavlink
+from pymavlink import mavutil
 from plugins import Plugin
 import intelhex
 
@@ -403,7 +403,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
 class Bootloader(QtGui.QDialog,  Plugin):
 
     def __init__(self,  parent,  mavlinkReceiver):
-        from pymavlink.dialects.v10 import dbgextensions as mb
+        from pymavlink.dialects.v10 import auv as mb
         global mb
         QtGui.QDialog.__init__(self)
         self.setWindowTitle("Bootloader")
@@ -446,7 +446,7 @@ class Bootloader(QtGui.QDialog,  Plugin):
         
     def discoverDevices(self):    
         msg = mb.MAVLink_bootloader_cmd_message(255, 255,  self.messageCounter,   mb.BOOT_INITIATE_SESSION, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
 
     def getDeviceInfo(self):    

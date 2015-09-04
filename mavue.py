@@ -55,12 +55,12 @@ import bootloader
 
 
 # define sorting order of MAVlink attributes (this controls the subtree structure of the message viewer).
-key_attribute_list=('_header.srcSystem',  '_header.srcComponent', '_type',  'name',  'param_id', 'stream_id',  'port',  'command')
+key_attribute_list=('_header.srcSystem',  '_header.srcComponent', '_type',  'param_id', 'stream_id',  'port',  'command')
     
 class Update_Thread():
     def __init__(self, treeViewInstance):
         self._treeViewInstance= treeViewInstance
-        self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver()
+        self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=False)
         self.running=True      
         self.lastTreeUpdate=time.time()
         self.treeUpdateFrequency=1.0
