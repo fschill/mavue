@@ -19,7 +19,7 @@ class PageBlock:
         self.addr=addr
         self.data=data
         self.length=length
-        self.checksum = x25crc(str(bytearray(data)))
+        self.checksum = x25crc((bytearray(data)))
         self.messageCounter=0
         self.ack=0
         self.retries = retries
@@ -29,7 +29,7 @@ class PageBlock:
 
     def padChecksum(self, total_length, value):
         for i in range(self.length, total_length):
-            self.checksum.accumulate(str([value]))
+            self.checksum.accumulate([value])
 
 class DeviceActions(ItemWithParameters,  Plugin):
     def __init__(self,  name=None,  mavlinkInterface=None,  sysid=255,  compid=255,  boardname="",    **kwargs):
@@ -158,12 +158,12 @@ class DeviceActions(ItemWithParameters,  Plugin):
             print ("successfully opened "+filename)
             print   (self.hexObject.maxaddr()-self.hexObject.minaddr())/1024,  "kbytes"
 
-        self.transferThread=Thread(target=self.writeFlashThread)
-        self.transferThread.start()
         # flush queue 
         while not  self.ack_msg_queue.empty():
             self.ack_msg_queue.get()
         #self.writeFlashThread()
+        self.transferThread=Thread(target=self.writeFlashThread)
+        self.transferThread.start()
 
     def loadPages(self):
         startAddress=self.hexObject.minaddr()
@@ -255,7 +255,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
             currentPage = pageList[0]
     
             pageVerified = self.verifyPageCRC(currentPage)
-
+            #pageVerified = False
             #collect all blocks for the current page:
             blocks=[]
             address_offset = 0
@@ -338,7 +338,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                         #self.ack_msg_queue=None
                         return
                 
-                    
+                #print "writing page %02X"%  currentPage.addr
                 # page complete - send write to flash command
                 msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_WRITE_BUFFER_TO_FLASH,  0,  currentPage.addr, pageSize)
                 self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))

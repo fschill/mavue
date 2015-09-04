@@ -1490,7 +1490,7 @@ class MavlinkSerialPort():
                                                          0,
                                                          0, [0]*70)
                         m = self.mav.recv_match(condition='SERIAL_CONTROL.count!=0',
-                                                type='SERIAL_CONTROL', blocking=True, timeout=0.01)
+                                                type='SERIAL_CONTROL', blocking=blocking, timeout=0.01)
                         if m is not None and m.count != 0:
                                 break
                 if m is not None:

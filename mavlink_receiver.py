@@ -112,7 +112,8 @@ class MAVlinkReceiver:
     def messageReceiveThread(self):
         while True:
             msg = self.master.recv_msg()
-            self.messageQueue.put(msg)
+            if msg!=None and msg.__class__.__name__!="MAVLink_bad_data":
+               self.messageQueue.put(msg)
             time.sleep(0.000001)
 
     def messagesAvailable(self):
@@ -124,7 +125,7 @@ class MAVlinkReceiver:
 
         if self.threading:
             try:
-                msg=self.messageQueue.get(True,  0.1)
+                msg=self.messageQueue.get(True,  0.01)
             except Empty:
                 return "", None;
         else:
