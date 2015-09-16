@@ -69,14 +69,15 @@ class MAVlinkReceiver:
         if threading:
             self.messageQueue=Queue()
             self.receiveThread=Thread(target=self.messageReceiveThread)
+            self.receiveThread.setDaemon(True)
             self.receiveThread.start()
 
-            self.earthserver=None
-            #self.earthserver=GoogleEarthServer()
-            if self.earthserver!=None:
-                self.earthserver.run()
+        self.earthserver=None
+        #self.earthserver=GoogleEarthServer()
+        if self.earthserver!=None:
+            self.earthserver.run()
 
-            self.requestAllStreams()
+        self.requestAllStreams()
 
     def reopenDevice(self, device):
         print ""
@@ -113,7 +114,9 @@ class MAVlinkReceiver:
         while True:
             msg = self.master.recv_msg()
             self.messageQueue.put(msg)
-            time.sleep(0.000001)
+            time.sleep(0.0001)
+
+
 
     def messagesAvailable(self):
         return not self.threading or not self.messageQueue.empty()
@@ -135,7 +138,7 @@ class MAVlinkReceiver:
         if msg!=None and msg.__class__.__name__!="MAVLink_bad_data":
             msg.mavlinkReceiver=self
 
-            msg_key="%s:%s"%(msg.get_srcSystem(),  msg.__class__.__name__)
+            msg_key="%s/%s:%s"%(msg.get_srcSystem(), msg.get_srcComponent(),  msg.__class__.__name__)
             self.messages[msg.__class__.__name__]=msg
             self.msg=msg
 
