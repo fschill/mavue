@@ -53,7 +53,7 @@ class DropTarget(QtGui.QWidget):
 
     def remove(self):
         try:
-            self.source.unsubscribe(self.updateValue)
+            self.source.unsubscribe(self.myParent.updateValue)
         except:
             print "remove", self.currentName, "  not subscribed"
 
@@ -70,6 +70,7 @@ class DropTarget(QtGui.QWidget):
             print "not subscribed"
         self.source=source
         self.source.subscribe(self.myParent.updateValue)
+        self.myParent.updateValue()
                 
         self.label.setAutoFillBackground(True)
         self.label.setStyleSheet("background-color: rgba(%i, %i, %i, %i); "%(self.color.red(),  self.color.green(),  self.color.blue(),  255))
@@ -79,6 +80,8 @@ class DropTarget(QtGui.QWidget):
     def dropEvent(self, event):
         #self.updateSource( event.source().model().lastDraggedNode)
         self.updateSource( event.source().model()._rootNode.retrieveByKey(str(event.mimeData().text()).split(':')))
+        self.source.subscribe(self.myParent.updateValue)
+        self.myParent.updateValue()
         
     def getData(self):
         if self.source==None:
@@ -246,15 +249,17 @@ class DropPlot(QtGui.QWidget):
         sourceTarget.sources[1].updateSource(event.source().model().lastDraggedNode)
         self.targets.append(sourceTarget)
         self.targets_layout.addWidget(sourceTarget)
+        self.updatePlot()
         print "dropped on plot!"
-        
+
     def enterEvent(self,  event):
         self.targets_area.setHidden(False)
         pass
 
     def leaveEvent(self,  event):
         self.targets_area.setHidden(True)
-        
+        None
+
     def mouseMoveEvent(self,  event):
         print(event.pos())
 

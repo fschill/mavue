@@ -60,10 +60,11 @@ key_attribute_list=('_header.srcSystem',  '_header.srcComponent', 'name',  'para
 class Update_Thread():
     def __init__(self, treeViewInstance):
         self._treeViewInstance= treeViewInstance
-        self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=False)
-        self.running=True      
+        self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=True)
+
+        self.running=True
         self.lastTreeUpdate=time.time()
-        self.treeUpdateFrequency=1.0
+        self.treeUpdateFrequency=5.0
         self.t = QtCore.QTimer()
         self.t.timeout.connect(self.update)
         self.t.start(1)
@@ -75,27 +76,31 @@ class Update_Thread():
         
     def update(self):
 
-        while self.mavlinkReceiver.messagesAvailable():
+        if self.mavlinkReceiver.messagesAvailable():
             msg_key=""
-            try:
+            if self.mavlinkReceiver.threading:
+                try:
+                    msg_key, msg=self.mavlinkReceiver.wait_message()
+                except:
+                    print "error in wait_message"
+            else:
                 msg_key, msg=self.mavlinkReceiver.wait_message()
-            except:
-                print "error in wait_message"
+            if msg_key!='':
 
-            if msg_key=='':
-              	return
-           #print "updating tree: ",msg_key
-            msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
 
-            #call plugins
-            self.plugin_manager.run_plugins(msg)
+                #print "received message:", msg_key
+               #print "updating tree: ",msg_key
+                msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
+
+                #call plugins
+                self.plugin_manager.run_plugins(msg)
 
                   
-           #self._treeViewInstance.treeView.update()
-
-            if time.time()>self.lastTreeUpdate+1/(self.treeUpdateFrequency):
-                self._treeViewInstance.model.layoutChanged.emit()
-                self.lastTreeUpdate=time.time()
+        #self._treeViewInstance.treeView.update()
+        if time.time()>self.lastTreeUpdate+1.0/(self.treeUpdateFrequency):
+            self._treeViewInstance.model.layoutChanged.emit()
+            self._treeViewInstance.rootNode.notifySubscribers()
+            self.lastTreeUpdate=time.time()
 
     def reloadPlugins(self):
         global plugins
@@ -218,6 +223,7 @@ class MainWindow(QtGui.QMainWindow):
             print "no connection to close."
 
         self.deleteLater()
+        print "shutting down."
         sys.exit(0)
 
     

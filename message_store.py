@@ -246,7 +246,7 @@ class ParamNode(MsgNode):
         self.content().mavlinkReceiver.master.param_fetch_one(self._children['param_id']._content)
         self._checked = state
 
-    def  editValue(self,  new_value):
+    def editValue(self,  new_value):
         print "change parameter",self._children['param_id'].content()," to ",  new_value
         #self.content().mavlinkReceiver.master.param_set_send(self._children['param_id'].content(),  new_value)
         self.content().mavlinkReceiver.master.mav.param_set_send( self.content().get_srcSystem(), self.content().get_srcComponent(), self._children['param_id'].content(),  new_value, 9)
