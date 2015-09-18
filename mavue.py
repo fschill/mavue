@@ -60,7 +60,7 @@ key_attribute_list=('_header.srcSystem',  '_header.srcComponent', 'name',  'para
 class Update_Thread():
     def __init__(self, treeViewInstance):
         self._treeViewInstance= treeViewInstance
-        self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=True)
+        self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=False)
 
         self.running=True
         self.lastTreeUpdate=time.time()

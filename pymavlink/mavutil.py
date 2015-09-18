@@ -906,12 +906,13 @@ class mavlogfile(mavfile):
         self.robust_parsing = robust_parsing
         self.planner_format = planner_format
         self._two64 = math.pow(2.0, 63)
+        print "opening log file:", filename
         mode = 'rb'
-        if self.writeable:
-            if append:
-                mode = 'ab'
-            else:
-                mode = 'wb'
+        #if self.writeable:
+        #    if append:
+        #        mode = 'ab'
+        #    else:
+        #        mode = 'wb'
         self.f = open(filename, mode)
         self.filesize = os.path.getsize(filename)
         self.percent = 0
@@ -933,7 +934,8 @@ class mavlogfile(mavfile):
         return self.f.read(n)
 
     def write(self, buf):
-        self.f.write(buf)
+        #self.f.write(buf)
+        None
 
     def scan_timestamp(self, tbuf):
         '''scan forward looking in a tlog for a timestamp in a reasonable range'''
