@@ -32,7 +32,7 @@ import debugger
 class plugin_manager():
     
     def __init__(self,  plugin_callback):
-        self.active_plugins=[]#debugger.Debugger()]#[distance_kalman_filter()]
+        self.active_plugins=[]#[debugger.Debugger()]#[distance_kalman_filter()]
         self.plugin_callback=plugin_callback
         
     def run_plugins(self,  message):

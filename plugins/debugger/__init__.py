@@ -9,7 +9,7 @@ import os
 class Debugger(plugins.Plugin):
     def __init__(self):
         self.severity = ["EMERGENCY",  "ALERT",  "CRITICAL",  "ERROR",  "WARNING",  "NOTICE",  "INFO",  "DEBUG_0",  "DEBUG_1",  "DEBUG_2",  "DEBUG_3"]
-        self.elf_filename = "../../../Power/Debug/Power.elf"
+        self.elf_filename = "../Power/Debug_Linux/Power.elf"
         self.load_elf_file(self.elf_filename)
                 
     def filter(self,  message):

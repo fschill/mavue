@@ -110,6 +110,10 @@ class MAVlinkReceiver:
         print "Requesting all parameters",  self.master.target_system,  self.master.target_component
         self.master.param_fetch_all()
 
+    def sendArmCommand(self):
+        #self.master.set_mode(mavutil.mavlink.MAV_MODE_MANUAL_ARMED)
+        self.master.mav.set_mode_send(self.master.target_system, mavutil.mavlink.MAV_MODE_MANUAL_ARMED, 0)
+
     def messageReceiveThread(self):
         while True:
             msg = self.master.recv_msg()
@@ -170,8 +174,8 @@ class MAVlinkReceiver:
                 #if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
                 #    return "", None; 
 
-            #if msg.__class__.__name__=="MAVLink_statustext_message":
-            #    print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
+            if msg.__class__.__name__=="MAVLink_statustext_message":
+                print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
 
             msg.key=msg_key
             return msg_key,  msg;

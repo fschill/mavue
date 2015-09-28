@@ -149,13 +149,17 @@ class MainWindow(QtGui.QMainWindow):
         self.connect(self.serialSelect,  QtCore.SIGNAL("currentIndexChanged(const QString&)"),  self.openConnection)
         
         self.menubarLayout.addWidget(self.serialSelect)
-        self.refreshButton=QtGui.QPushButton("refresh streams")
+        self.refreshButton=QtGui.QPushButton("refresh")
         self.menubarLayout.addWidget(self.refreshButton)
         self.connect(self.refreshButton,  QtCore.SIGNAL("clicked()"),  self.updater.mavlinkReceiver.requestAllStreams)
         
-        self.reloadPluginsButton=QtGui.QPushButton("reload plugins")
-        self.menubarLayout.addWidget(self.reloadPluginsButton)
-        self.connect(self.reloadPluginsButton,  QtCore.SIGNAL("clicked()"),  self.updater.reloadPlugins)
+        #self.reloadPluginsButton=QtGui.QPushButton("reload plugins")
+        #self.menubarLayout.addWidget(self.reloadPluginsButton)
+        #self.connect(self.reloadPluginsButton,  QtCore.SIGNAL("clicked()"),  self.updater.reloadPlugins)
+
+        self.armButton=QtGui.QPushButton("Arm")
+        self.menubarLayout.addWidget(self.armButton)
+        self.connect(self.armButton,  QtCore.SIGNAL("clicked()"),  self.updater.mavlinkReceiver.sendArmCommand)
 
         self.bootloaderButton=QtGui.QPushButton("Bootloader")
         self.menubarLayout.addWidget(self.bootloaderButton)
