@@ -257,7 +257,7 @@ class ValueNode(RootNode):
 
         self._key_attribute="fieldname"
         self.trace=[]
-        self.max_trace_length=100
+        self.max_trace_length=100000
         self.last_update=None
         self.update_period=0
 
