@@ -114,6 +114,9 @@ class MAVlinkReceiver:
         #self.master.set_mode(mavutil.mavlink.MAV_MODE_MANUAL_ARMED)
         self.master.mav.set_mode_send(self.master.target_system, mavutil.mavlink.MAV_MODE_MANUAL_ARMED, 0)
 
+    def sendStandbyCommand(self):
+        self.master.mav.set_mode_send(self.master.target_system, mavutil.mavlink.MAV_STATE_STANDBY, 0)
+
     def messageReceiveThread(self):
         while True:
             msg = self.master.recv_msg()

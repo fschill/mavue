@@ -58,10 +58,10 @@ import bootloader
 key_attribute_list=('_header.srcSystem',  '_header.srcComponent', 'name',  'param_id', 'stream_id',  'port',  'command')
     
 class Update_Thread():
-    def __init__(self, treeViewInstance):
+    def __init__(self, parent, treeViewInstance):
         self._treeViewInstance= treeViewInstance
         self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=False)
-
+        self._parent = parent
         self.running=True
         self.lastTreeUpdate=time.time()
         self.treeUpdateFrequency=5.0
@@ -69,6 +69,7 @@ class Update_Thread():
         self.t.timeout.connect(self.update)
         self.t.start(1)
         self.plugin_manager=plugins.plugin_manager(self.plugin_callback)
+        self.timelinePlot = None
         
     def plugin_callback(self,  msg):
         if msg!=None:
@@ -87,11 +88,15 @@ class Update_Thread():
                 msg_key, msg=self.mavlinkReceiver.wait_message()
             if msg_key!='':
 
-
                 #print "received message:", msg_key
-               #print "updating tree: ",msg_key
+                #print "updating tree: ",msg_key
                 msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
 
+                if msg_key.__contains__('MAVLink_heartbeat_message'):
+                    if self.timelinePlot is None:
+                        self.timelinePlot = MainWindow.addTimeline(self._parent)
+                        self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("base_mode"))
+                        self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("system_status"))
                 #call plugins
                 self.plugin_manager.run_plugins(msg)
 
@@ -125,7 +130,7 @@ class MainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self)
         
         self.messageTreeView=MessageTreeView()
-        self.updater=Update_Thread(self.messageTreeView)
+        self.updater=Update_Thread(self, self.messageTreeView)
 
         self.serialPorts= self.updater.mavlinkReceiver.scanForSerials()
         print self.serialPorts
@@ -161,6 +166,10 @@ class MainWindow(QtGui.QMainWindow):
         self.menubarLayout.addWidget(self.armButton)
         self.connect(self.armButton,  QtCore.SIGNAL("clicked()"),  self.updater.mavlinkReceiver.sendArmCommand)
 
+        self.standbyButton=QtGui.QPushButton("Standby")
+        self.menubarLayout.addWidget(self.standbyButton)
+        self.connect(self.standbyButton,  QtCore.SIGNAL("clicked()"),  self.updater.mavlinkReceiver.sendStandbyCommand)
+
         self.bootloaderButton=QtGui.QPushButton("Bootloader")
         self.menubarLayout.addWidget(self.bootloaderButton)
         self.connect(self.bootloaderButton,  QtCore.SIGNAL("clicked()"),  self.openBootloader)
@@ -190,6 +199,14 @@ class MainWindow(QtGui.QMainWindow):
         dock1=DockPlot(title="plot",  parent=self,  widget=pw1)
         #self.addDockWidget(QtCore.Qt.NoDockWidgetArea,  dock1)
         dock1.show()
+        return dock1
+
+    def addTimeline(self):
+        pw1 = TimeLinePlot()
+        dock1=DockPlot(title="plot",  parent=self,  widget=pw1)
+        dock1.show()
+        return dock1
+
 
     def addParamSlider(self):
         
