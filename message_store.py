@@ -30,6 +30,7 @@ class RootNode(object):
         self._checked = checked
         self._key_attribute=key_attribute
         self._subscribers=set()
+        self._messageCounter = 0; # continuous counter of incoming messages (incremented with each call of updateContent)
         
         if content!=None and self._key_attribute!=None:
             self._name=rgetattr(content,  self._key_attribute)
@@ -40,16 +41,26 @@ class RootNode(object):
     def addChild(self, child):
         self._children[child.name()]=child
 
+    def getMessageCounter(self): # get message counter of root node
+        if self._parent is not None:
+            return self._parent.getMessageCounter()
+        else:
+            return self._messageCounter
+
     def updateContent(self, key_attribute_list,  content):
         if len(key_attribute_list)==0:
             return
         
+        #check if we are at top level and increment message counter
+        if self._parent is None:
+            self._messageCounter += 1
+
         child_name=None
         try:
             child_name=rgetattr(content,  key_attribute_list[0])
         except AttributeError:
             pass
-        
+
         # test remaining keys to see if any are valid
         future_keys=0
         for a in key_attribute_list:
@@ -138,8 +149,8 @@ class RootNode(object):
     def columnCount(self, parent):
         return 2
 
-    def content(self):
-        return self._content
+    #def content(self):
+    #    return self._content
 
     def isMessage(self):
         return False
@@ -263,6 +274,9 @@ class ValueNode(RootNode):
 
         if self._parent is not None:
             self._parent.addChild(self)
+
+    def content(self):
+        return self._content
 
 
     def updateContent(self, content):

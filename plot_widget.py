@@ -231,9 +231,9 @@ class DropPlot(QtGui.QWidget):
     def updateSource(self, source):
       self.source=source
 
-    def updatePlot(self):
-        for t in self.targets:
-            t.updateCurve()
+    #def updatePlot(self):
+    #    for t in self.targets:
+    #        t.updateCurve()
               
     def dragEnterEvent(self, event):
         print "drag_enter plot"
@@ -249,7 +249,7 @@ class DropPlot(QtGui.QWidget):
         sourceTarget.sources[1].updateSource(event.source().model().lastDraggedNode)
         self.targets.append(sourceTarget)
         self.targets_layout.addWidget(sourceTarget)
-        self.updatePlot()
+        #self.updatePlot()
         print "dropped on plot!"
 
     def enterEvent(self,  event):

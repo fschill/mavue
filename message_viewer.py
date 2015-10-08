@@ -9,10 +9,6 @@ Refer to the file LICENSE.TXT which should be included in all distributions of t
 
 
 from pyqtgraph.Qt import QtGui, QtCore
-import numpy as np
-import pyqtgraph as pg
-import time
-
 from message_store import *
 
 
