@@ -70,42 +70,44 @@ class Update_Thread():
         self.t.start(1)
         self.plugin_manager=plugins.plugin_manager(self.plugin_callback)
         self.timelinePlot = None
+        self.mainDataRange=[-50, 0]
         
     def plugin_callback(self,  msg):
         if msg!=None:
             self._treeViewInstance.rootNode.updateContent(msg)
         
     def update(self):
-
-        if self.mavlinkReceiver.messagesAvailable():
-            msg_key=""
-            if self.mavlinkReceiver.threading:
-                try:
+        for i in range(0,100):
+            if self.mavlinkReceiver.messagesAvailable():
+                msg_key=""
+                if self.mavlinkReceiver.threading:
+                    try:
+                        msg_key, msg=self.mavlinkReceiver.wait_message()
+                    except:
+                        print "error in wait_message"
+                else:
                     msg_key, msg=self.mavlinkReceiver.wait_message()
-                except:
-                    print "error in wait_message"
+                if msg_key!='':
+
+                    #print "received message:", msg_key
+                    #print "updating tree: ",msg_key
+                    msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
+
+                    if msg_key.__contains__('MAVLink_heartbeat_message'):
+                        if self.timelinePlot is None:
+                            self.timelinePlot = MainWindow.addTimeline(self._parent)
+                            self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("base_mode"))
+                            self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("system_status"))
+                    #call plugins
+                    self.plugin_manager.run_plugins(msg)
             else:
-                msg_key, msg=self.mavlinkReceiver.wait_message()
-            if msg_key!='':
+                break
 
-                #print "received message:", msg_key
-                #print "updating tree: ",msg_key
-                msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
-
-                if msg_key.__contains__('MAVLink_heartbeat_message'):
-                    if self.timelinePlot is None:
-                        self.timelinePlot = MainWindow.addTimeline(self._parent)
-                        self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("base_mode"))
-                        self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("system_status"))
-                #call plugins
-                self.plugin_manager.run_plugins(msg)
-
-                  
-        #self._treeViewInstance.treeView.update()
-        if time.time()>self.lastTreeUpdate+1.0/(self.treeUpdateFrequency):
-            self._treeViewInstance.model.layoutChanged.emit()
-            self._treeViewInstance.rootNode.notifySubscribers()
-            self.lastTreeUpdate=time.time()
+            #self._treeViewInstance.treeView.update()
+            if time.time()>self.lastTreeUpdate+1.0/(self.treeUpdateFrequency):
+                self._treeViewInstance.model.layoutChanged.emit()
+                self._treeViewInstance.rootNode.notifySubscribers()
+                self.lastTreeUpdate=time.time()
 
     def reloadPlugins(self):
         global plugins
@@ -194,7 +196,7 @@ class MainWindow(QtGui.QMainWindow):
         self.show()
         
     def addPlot(self):
-        pw1 = DropPlot() 
+        pw1 = DropPlot(parent=self, dataRange=self.updater.mainDataRange)
         #self.l.addWidget(pw1,  0,  1)
         dock1=DockPlot(title="plot",  parent=self,  widget=pw1)
         #self.addDockWidget(QtCore.Qt.NoDockWidgetArea,  dock1)
@@ -202,8 +204,8 @@ class MainWindow(QtGui.QMainWindow):
         return dock1
 
     def addTimeline(self):
-        pw1 = TimeLinePlot()
-        dock1=DockPlot(title="plot",  parent=self,  widget=pw1)
+        pw1 = TimeLinePlot(parent=self, dataRange=self.updater.mainDataRange)
+        dock1=DockPlot(title="Timeline",  parent=self,  widget=pw1)
         dock1.show()
         return dock1
 

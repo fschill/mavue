@@ -48,6 +48,12 @@ class RootNode(object):
         else:
             return self._messageCounter
 
+    def getRootNode(self):  # get message counter of root node
+        if self._parent is not None:
+            return self._parent.getRootNode()
+        else:
+            return self
+
     def updateContent(self, key_attribute_list, content):
         msgNode=None
         if len(key_attribute_list) == 0:
@@ -170,6 +176,11 @@ class RootNode(object):
             return str(self._name)
             # return self._key_attribute
 
+    def notifyAllSubscribers(self):
+        self.notifySubscribers()
+        for c in self._children.values():
+            c.notifyAllSubscribers()
+
     def notifySubscribers(self):
         for s in self._subscribers:
             try:
@@ -275,6 +286,7 @@ class ValueNode(RootNode):
 
         self._key_attribute = "fieldname"
         self.trace = []
+        self.counterTrace = []
         self.max_trace_length = 1000000
         self.last_update = None
         self.update_period = 0
@@ -285,11 +297,30 @@ class ValueNode(RootNode):
     def content(self):
         return self._content
 
-    def getTrace(self, start=-100, end=0):
-        if end==0:
-            return self.trace[start:]
+    def findTraceIndex(self, counterValue):
+        start = 0
+        end = len(self.counterTrace)
+        while end-start>1:
+            middle = (start+end)/2
+            if counterValue < self.counterTrace[middle]:
+                end = middle
+            else:
+                start = middle
+
+        return start
+
+
+    def getTrace(self, range=[-100, 0]):
+        if range[1]==0:
+            return self.trace[self.findTraceIndex(range[0]):]
         else:
-            return self.trace[start:end]
+            return self.trace[self.findTraceIndex(range[0]):self.findTraceIndex(range[1])]
+
+    def getCounterTrace(self, range=[-100, 0]):
+        if range[1]==0:
+            return self.counterTrace[self.findTraceIndex(range[0]):]
+        else:
+            return self.counterTrace[self.findTraceIndex(range[0]):self.findTraceIndex(range[1])]
 
     def updateContent(self, content):
         #if isinstance(content, list):
@@ -301,9 +332,10 @@ class ValueNode(RootNode):
         # keep traces of scalar values
         #if isinstance(self._content, int) or isinstance(self._content, float):
         self.trace.append(content)
+        self.counterTrace.append(self.getMessageCounter())
         if len(self.trace) > self.max_trace_length:
             self.trace = self.trace[-self.max_trace_length:]
-
+            self.counterTrace = self.counterTrace[-self.max_trace_length:]
         self._content = content
         self.notifySubscribers()
         return self
