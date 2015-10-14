@@ -2,7 +2,7 @@ from pyqtgraph.Qt import QtGui
 from gui_elements import *
 from abstractparameters import *
 
-from pymavlink import pymavlink
+from pymavlink import mavutil
 from plugins import Plugin
 import intelhex
 
@@ -19,7 +19,7 @@ class PageBlock:
         self.addr=addr
         self.data=data
         self.length=length
-        self.checksum = x25crc(str(bytearray(data)))
+        self.checksum = x25crc((bytearray(data)))
         self.messageCounter=0
         self.ack=0
         self.retries = retries
@@ -29,7 +29,7 @@ class PageBlock:
 
     def padChecksum(self, total_length, value):
         for i in range(self.length, total_length):
-            self.checksum.accumulate(str([value]))
+            self.checksum.accumulate([value])
 
 class DeviceActions(ItemWithParameters,  Plugin):
     def __init__(self,  name=None,  mavlinkInterface=None,  sysid=255,  compid=255,  boardname="",    **kwargs):
@@ -134,7 +134,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
 
     def getDeviceInfo(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,  self.messageCounter,   mb.BOOT_GET_PROCESSOR_INFORMATION, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
 
     def openHexFile(self,  fileParameter):
@@ -142,7 +142,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
 
     def readFlash(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,  self.messageCounter,   mb.BOOT_READ_MEMORY, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
 
     def writeFlash(self):    
@@ -158,12 +158,12 @@ class DeviceActions(ItemWithParameters,  Plugin):
             print ("successfully opened "+filename)
             print   (self.hexObject.maxaddr()-self.hexObject.minaddr())/1024,  "kbytes"
 
-        self.transferThread=Thread(target=self.writeFlashThread)
-        self.transferThread.start()
         # flush queue 
         while not  self.ack_msg_queue.empty():
             self.ack_msg_queue.get()
         #self.writeFlashThread()
+        self.transferThread=Thread(target=self.writeFlashThread)
+        self.transferThread.start()
 
     def loadPages(self):
         startAddress=self.hexObject.minaddr()
@@ -196,7 +196,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
 
         # send a request for a flash page CRC:
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_VERIFY_MEMORY,  0,  currentPage.addr, pageSize)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         try:
             receivedAck=self.ack_msg_queue.get(True,  1.0)
             if receivedAck.command == mb.BOOT_VERIFY_MEMORY | mb.ACK_FLAG:
@@ -233,7 +233,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
         for i in range(0, 3):
            #enter programming mode
             msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_START_REPROGRAM,  0,  0, 0)
-            self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+            self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
 
             try:
                 receivedAck=self.ack_msg_queue.get(True,  1.0)
@@ -255,7 +255,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
             currentPage = pageList[0]
     
             pageVerified = self.verifyPageCRC(currentPage)
-
+            #pageVerified = False
             #collect all blocks for the current page:
             blocks=[]
             address_offset = 0
@@ -280,7 +280,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                         b.messageCounter=self.messageCounter
                         #print "sending ",   "%02X"% b.addr
                         msg = mb.MAVLink_bootloader_data_message(self.sysid, self.compid,   b.messageCounter,  mb.BOOT_WRITE_TO_BUFFER,  b.addr,  b.length, b.data)
-                        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+                        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
                         # append transmitted message IDs to list for checking the acknowledgements
                         sentMessages.append(self.messageCounter)
                         self.messageCounter+=1
@@ -338,10 +338,10 @@ class DeviceActions(ItemWithParameters,  Plugin):
                         #self.ack_msg_queue=None
                         return
                 
-                    
+                #print "writing page %02X"%  currentPage.addr
                 # page complete - send write to flash command
                 msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_WRITE_BUFFER_TO_FLASH,  0,  currentPage.addr, pageSize)
-                self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+                self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
                 try:
                     receivedAck=self.ack_msg_queue.get(True,  0.5)
                     
@@ -377,7 +377,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
         self.transferProgress.updateValue(value=endAddress,  min=startAddress,  max=endAddress)
         
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,  mb.BOOT_END_REPROGRAM,  0,  0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
 
         print "transfer complete." ,  finishTime-startTime,  "seconds (",  binsize/(finishTime-startTime)/1000.0,  "kbytes/sec)"
         #self.ack_msg_queue=None
@@ -385,25 +385,25 @@ class DeviceActions(ItemWithParameters,  Plugin):
 
     def verifyFlash(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,   self.messageCounter,   mb.BOOT_READ_MEMORY, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
 
     def startApplication(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,  self.messageCounter, mb.BOOT_START_APPLICATION, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
 
 
     def sendResetCommand(self):    
         msg = mb.MAVLink_bootloader_cmd_message(self.sysid, self.compid,  self.messageCounter, mb.BOOT_RESET, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
 
         
 class Bootloader(QtGui.QDialog,  Plugin):
 
     def __init__(self,  parent,  mavlinkReceiver):
-        from pymavlink.dialects.v10 import dbgextensions as mb
+        from pymavlink.dialects.v10 import auv as mb
         global mb
         QtGui.QDialog.__init__(self)
         self.setWindowTitle("Bootloader")
@@ -446,18 +446,18 @@ class Bootloader(QtGui.QDialog,  Plugin):
         
     def discoverDevices(self):    
         msg = mb.MAVLink_bootloader_cmd_message(255, 255,  self.messageCounter,   mb.BOOT_INITIATE_SESSION, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
 
     def getDeviceInfo(self):    
         msg = mb.MAVLink_bootloader_cmd_message(255, 255,  self.messageCounter,   mb.BOOT_GET_PROCESSOR_INFORMATION, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
 
 
     def sendResetCommand(self):    
         msg = mb.MAVLink_bootloader_cmd_message(255, 255, self.messageCounter, mb.BOOT_RESET, 0, 0, 0)
-        self.mavlinkReceiver.master.write(msg.pack((pymavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
+        self.mavlinkReceiver.master.write(msg.pack((mavutil.mavlink.MAVLink(file=0,  srcSystem=self.mavlinkReceiver.master.source_system))))
         self.messageCounter+=1
         
     def closeEvent(self,  event):

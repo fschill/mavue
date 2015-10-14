@@ -16,8 +16,8 @@ from Queue import Empty
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), 'pymavlink'))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), '.'))
 
-import  mavutil
-from pymavlink import pymavlink
+#import  mavutil
+from pymavlink import mavutil
 
 from optparse import OptionParser
 
@@ -90,9 +90,9 @@ class MAVlinkReceiver:
         if self.master==None:
             return
         # request activation/deactivation of stream. If frequency is 0, it won't be changed.
-        reqMsg=pymavlink.MAVLink_request_data_stream_message(target_system=stream.get_srcSystem(), target_component=stream.get_srcComponent(), req_stream_id=stream.get_msgId(), req_message_rate=frequency, start_stop=active)
+        reqMsg=mavutil.mavlink.MAVLink_request_data_stream_message(target_system=stream.get_srcSystem(), target_component=stream.get_srcComponent(), req_stream_id=stream.get_msgId(), req_message_rate=frequency, start_stop=active)
 
-        self.master.write(reqMsg.pack(pymavlink.MAVLink(file=0,  srcSystem=self.master.source_system)))
+        self.master.write(reqMsg.pack(mavutil.mavlink.MAVLink(file=0,  srcSystem=self.master.source_system)))
 
         if active:
             print "System ", stream.get_srcSystem(), stream.get_srcComponent(),": activating stream",   stream.get_msgId(),  frequency
@@ -103,19 +103,26 @@ class MAVlinkReceiver:
         if self.master==None:
             return
         print "Requesting all streams from ",  self.master.target_system,  self.master.target_component
-        reqMsg=pymavlink.MAVLink_request_data_stream_message(target_system=self.master.target_system, target_component=0, req_stream_id=255, req_message_rate=0, start_stop=0)
-        self.master.write(reqMsg.pack(pymavlink.MAVLink(file=0,  srcSystem=self.master.source_system)))
+        reqMsg=mavutil.mavlink.MAVLink_request_data_stream_message(target_system=self.master.target_system, target_component=0, req_stream_id=255, req_message_rate=0, start_stop=0)
+        self.master.write(reqMsg.pack(mavutil.mavlink.MAVLink(file=0,  srcSystem=self.master.source_system)))
 
         #time.sleep(0.1)
         print "Requesting all parameters",  self.master.target_system,  self.master.target_component
         self.master.param_fetch_all()
 
+    def sendArmCommand(self):
+        #self.master.set_mode(mavutil.mavlink.MAV_MODE_MANUAL_ARMED)
+        self.master.mav.set_mode_send(self.master.target_system, mavutil.mavlink.MAV_MODE_MANUAL_ARMED, 0)
+
+    def sendStandbyCommand(self):
+        self.master.mav.set_mode_send(self.master.target_system, mavutil.mavlink.MAV_STATE_STANDBY, 0)
+
     def messageReceiveThread(self):
         while True:
             msg = self.master.recv_msg()
-            self.messageQueue.put(msg)
-            time.sleep(0.0001)
-
+            if msg!=None and msg.__class__.__name__!="MAVLink_bad_data":
+               self.messageQueue.put(msg)
+            time.sleep(0.000001)
 
 
     def messagesAvailable(self):
@@ -127,7 +134,7 @@ class MAVlinkReceiver:
 
         if self.threading:
             try:
-                msg=self.messageQueue.get(True,  0.1)
+                msg=self.messageQueue.get(True,  0.01)
             except Empty:
                 return "", None;
         else:
@@ -170,8 +177,8 @@ class MAVlinkReceiver:
                 #if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
                 #    return "", None; 
 
-            #if msg.__class__.__name__=="MAVLink_statustext_message":
-            #    print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
+            if msg.__class__.__name__=="MAVLink_statustext_message":
+                print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
 
             msg.key=msg_key
             return msg_key,  msg;

@@ -17,7 +17,7 @@ import gui_elements
 
 
 class DropTarget(QtGui.QWidget):
-    def __init__(self,text, parent ,  color=QtGui.QColor(0, 0, 0)):
+    def __init__(self,text, parent, color=QtGui.QColor(0, 0, 0)):
         QtGui.QWidget.__init__( self, parent=parent)
         self.myParent=parent
         self.originalName=text
@@ -40,7 +40,6 @@ class DropTarget(QtGui.QWidget):
         self.setAcceptDrops(True)
         self.source=None
         self.curve=None
-        
 
     def dragEnterEvent(self, event):
         print "drag_enter"
@@ -89,11 +88,11 @@ class DropTarget(QtGui.QWidget):
         if isinstance(self.source.content(), list):
             return self.source.content()
         else:
-            return self.source.trace
+            return self.source.getTrace(self.myParent.dataRange)
 
 
 class Curve2DBox(QtGui.QWidget):
-    def __init__(self,text, parent ,  color=QtGui.QColor(0, 0, 0)):
+    def __init__(self,text, parent, dataRange=[-100, 0],  color=QtGui.QColor(0, 0, 0)):
         QtGui.QWidget.__init__( self, parent=parent)
         self.myParent=parent
         self.color=color
@@ -113,7 +112,7 @@ class Curve2DBox(QtGui.QWidget):
         self.layout.addWidget(self.curveTypeCombo)
         self.curve=None
         self.setAcceptDrops(True)
-
+        self.dataRange = dataRange
 
     def updateCurveType(self,  selectedCurve):
         self.curveType=selectedCurve
@@ -144,7 +143,8 @@ class Curve2DBox(QtGui.QWidget):
         ydata=self.sources[1].getData()
         length=max(len(xdata),  len(ydata))
         if len(xdata)==0:
-            xdata=[i for i in range(0, length)]
+            #xdata=[i for i in range(0, length)]
+            xdata = self.sources[1].source.getCounterTrace(self.dataRange)
         if len(ydata)==0:
             ydata=[i for i in range(0, length)]
             
@@ -178,7 +178,7 @@ class Curve2DBox(QtGui.QWidget):
     
 class DropPlot(QtGui.QWidget):
     dropped = QtCore.pyqtSignal(list)
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, dataRange=[-100,0]):
         QtGui.QWidget.__init__( self, parent=parent)
         self.setContentsMargins(0, 0, 0, 0)
 
@@ -193,7 +193,6 @@ class DropPlot(QtGui.QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
 
-
         self.targets_area=QtGui.QWidget()
         self.targets_layout=QtGui.QHBoxLayout()
         
@@ -202,7 +201,7 @@ class DropPlot(QtGui.QWidget):
         self.targets_area.setHidden(True)
         self.targets=[]
         self.layout.addWidget(self.targets_area)
-
+        self.dataRange=dataRange
         #sourceTarget=Curve2DBox("data", self,  color=pg.intColor(len(self.targets)))
         #self.targets.append(sourceTarget)
         #self.targets_layout.addWidget(sourceTarget)
@@ -231,9 +230,9 @@ class DropPlot(QtGui.QWidget):
     def updateSource(self, source):
       self.source=source
 
-    #def updatePlot(self):
-    #    for t in self.targets:
-    #        t.updateCurve()
+    def updatePlot(self):
+        for t in self.targets:
+            t.updateValue()
               
     def dragEnterEvent(self, event):
         print "drag_enter plot"
@@ -245,13 +244,19 @@ class DropPlot(QtGui.QWidget):
             event.ignore() 
 
     def dropEvent(self, event):
-        sourceTarget=Curve2DBox("data", self,  color=pg.intColor(len(self.targets)))
-        sourceTarget.sources[1].updateSource(event.source().model().lastDraggedNode)
-        self.targets.append(sourceTarget)
-        self.targets_layout.addWidget(sourceTarget)
         #self.updatePlot()
+        self.addSource(sourceY=event.source().model().lastDraggedNode)
         print "dropped on plot!"
 
+    def addSource(self, sourceX=None, sourceY=None):
+        sourceTarget=Curve2DBox("data", self, dataRange=self.dataRange, color=pg.intColor(len(self.targets)))
+        if sourceX is not None:
+            sourceTarget.sources[0].updateSource(sourceX)
+        if sourceY is not None:
+            sourceTarget.sources[1].updateSource(sourceY)
+        self.targets.append(sourceTarget)
+        self.targets_layout.addWidget(sourceTarget)
+        
     def enterEvent(self,  event):
         self.targets_area.setHidden(False)
         pass
@@ -270,6 +275,64 @@ class DropPlot(QtGui.QWidget):
         while len(self.targets)>0:
             self.targets[0].deleteTarget()
         print "closing window"
+
+class TimeLinePlot(DropPlot):
+    def __init__(self, parent=None, dataRange=[0,0]):
+        DropPlot.__init__( self, parent=parent, dataRange=dataRange)
+
+        self.lr = pg.LinearRegionItem([0,100])
+        self.plotwidget.addItem(self.lr)
+        self.lr.sigRegionChanged.connect(self.regionChanged)
+        self.plotwidget.sigXRangeChanged.connect(self.plotChanged)
+        self.tracking = True
+        self.internalModificationFlag = False
+
+    def addSource(self, sourceX=None, sourceY=None):
+        sourceTarget=Curve2DBox("data", self, dataRange=[0,0], color=pg.intColor(len(self.targets)))
+        if sourceX is not None:
+            sourceTarget.sources[0].updateSource(sourceX)
+        if sourceY is not None:
+            sourceTarget.sources[1].updateSource(sourceY)
+        self.targets.append(sourceTarget)
+        self.targets_layout.addWidget(sourceTarget)
+
+    def regionChanged(self):
+        if self.internalModificationFlag:
+            self.internalModificationFlag=False
+            return
+        region = list(self.lr.getRegion())
+        try:
+            maxCounter = self.targets[0].sources[1].source.getMessageCounter()
+            visibleRange = self.plotwidget.getViewBox().viewRange()[0]
+            if region[1] >= maxCounter:
+                offset = region[1]-maxCounter
+                region[1] -= offset
+                region[0] -= offset
+                self.tracking = True
+            else:
+                self.tracking = False
+
+            self.lr.setRegion(region)
+            self.dataRange[0]=region[0]
+            self.dataRange[1]=region[1]
+            self.targets[0].sources[1].source.getRootNode().notifyAllSubscribers()
+        except:
+            pass
+
+    def plotChanged(self):
+        region = list(self.lr.getRegion())
+        visibleRange = self.plotwidget.getViewBox().viewRange()[0]
+        if self.tracking and  region[1] < visibleRange[1]:
+            offset = region[1]-visibleRange[1]
+            region[1] -= offset
+            region[0] -= offset
+        self.internalModificationFlag = True
+        self.lr.setRegion(region)
+        self.dataRange[0]=region[0]
+        self.dataRange[1]=region[1]
+
+    def sizeHint(self):
+        return QtCore.QSize(800, 150)
 
 
 class DockPlot(QtGui.QDialog):

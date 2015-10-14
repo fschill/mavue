@@ -55,51 +55,59 @@ import bootloader
 
 
 # define sorting order of MAVlink attributes (this controls the subtree structure of the message viewer).
-key_attribute_list=('_header.srcSystem',  '_header.srcComponent', '_type',  'name',  'param_id', 'stream_id',  'port',  'command')
+key_attribute_list=('_header.srcSystem',  '_header.srcComponent', 'name',  'param_id', 'stream_id',  'port',  'command')
     
 class Update_Thread():
-    def __init__(self, treeViewInstance):
+    def __init__(self, parent, treeViewInstance):
         self._treeViewInstance= treeViewInstance
-        self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=True)
-        self.running=True      
+        self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=False)
+        self._parent = parent
+        self.running=True
         self.lastTreeUpdate=time.time()
         self.treeUpdateFrequency=5.0
         self.t = QtCore.QTimer()
         self.t.timeout.connect(self.update)
         self.t.start(1)
         self.plugin_manager=plugins.plugin_manager(self.plugin_callback)
+        self.timelinePlot = None
+        self.mainDataRange=[-50, 0]
         
     def plugin_callback(self,  msg):
         if msg!=None:
             self._treeViewInstance.rootNode.updateContent(msg)
         
     def update(self):
-
-        if self.mavlinkReceiver.messagesAvailable():
-            msg_key=""
-            if self.mavlinkReceiver.threading:
-                try:
+        for i in range(0,100):
+            if self.mavlinkReceiver.messagesAvailable():
+                msg_key=""
+                if self.mavlinkReceiver.threading:
+                    try:
+                        msg_key, msg=self.mavlinkReceiver.wait_message()
+                    except:
+                        print "error in wait_message"
+                else:
                     msg_key, msg=self.mavlinkReceiver.wait_message()
-                except:
-                    print "error in wait_message"
+                if msg_key!='':
+
+                    #print "received message:", msg_key
+                    #print "updating tree: ",msg_key
+                    msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
+
+                    if msg_key.__contains__('MAVLink_heartbeat_message'):
+                        if self.timelinePlot is None:
+                            self.timelinePlot = MainWindow.addTimeline(self._parent)
+                            self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("base_mode"))
+                            self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("system_status"))
+                    #call plugins
+                    self.plugin_manager.run_plugins(msg)
             else:
-                msg_key, msg=self.mavlinkReceiver.wait_message()
-            if msg_key!='':
+                break
 
-
-                #print "received message:", msg_key
-               #print "updating tree: ",msg_key
-                msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
-
-                #call plugins
-                self.plugin_manager.run_plugins(msg)
-
-                  
-        #self._treeViewInstance.treeView.update()
-        if time.time()>self.lastTreeUpdate+1.0/(self.treeUpdateFrequency):
-            self._treeViewInstance.model.layoutChanged.emit()
-            self._treeViewInstance.rootNode.notifySubscribers()
-            self.lastTreeUpdate=time.time()
+            #self._treeViewInstance.treeView.update()
+            if time.time()>self.lastTreeUpdate+1.0/(self.treeUpdateFrequency):
+                self._treeViewInstance.model.layoutChanged.emit()
+                self._treeViewInstance.rootNode.notifySubscribers()
+                self.lastTreeUpdate=time.time()
 
     def reloadPlugins(self):
         global plugins
@@ -124,7 +132,7 @@ class MainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self)
         
         self.messageTreeView=MessageTreeView()
-        self.updater=Update_Thread(self.messageTreeView)
+        self.updater=Update_Thread(self, self.messageTreeView)
 
         self.serialPorts= self.updater.mavlinkReceiver.scanForSerials()
         print self.serialPorts
@@ -148,13 +156,21 @@ class MainWindow(QtGui.QMainWindow):
         self.connect(self.serialSelect,  QtCore.SIGNAL("currentIndexChanged(const QString&)"),  self.openConnection)
         
         self.menubarLayout.addWidget(self.serialSelect)
-        self.refreshButton=QtGui.QPushButton("refresh streams")
+        self.refreshButton=QtGui.QPushButton("refresh")
         self.menubarLayout.addWidget(self.refreshButton)
         self.connect(self.refreshButton,  QtCore.SIGNAL("clicked()"),  self.updater.mavlinkReceiver.requestAllStreams)
         
-        self.reloadPluginsButton=QtGui.QPushButton("reload plugins")
-        self.menubarLayout.addWidget(self.reloadPluginsButton)
-        self.connect(self.reloadPluginsButton,  QtCore.SIGNAL("clicked()"),  self.updater.reloadPlugins)
+        #self.reloadPluginsButton=QtGui.QPushButton("reload plugins")
+        #self.menubarLayout.addWidget(self.reloadPluginsButton)
+        #self.connect(self.reloadPluginsButton,  QtCore.SIGNAL("clicked()"),  self.updater.reloadPlugins)
+
+        self.armButton=QtGui.QPushButton("Arm")
+        self.menubarLayout.addWidget(self.armButton)
+        self.connect(self.armButton,  QtCore.SIGNAL("clicked()"),  self.updater.mavlinkReceiver.sendArmCommand)
+
+        self.standbyButton=QtGui.QPushButton("Standby")
+        self.menubarLayout.addWidget(self.standbyButton)
+        self.connect(self.standbyButton,  QtCore.SIGNAL("clicked()"),  self.updater.mavlinkReceiver.sendStandbyCommand)
 
         self.bootloaderButton=QtGui.QPushButton("Bootloader")
         self.menubarLayout.addWidget(self.bootloaderButton)
@@ -180,11 +196,19 @@ class MainWindow(QtGui.QMainWindow):
         self.show()
         
     def addPlot(self):
-        pw1 = DropPlot() 
+        pw1 = DropPlot(parent=self, dataRange=self.updater.mainDataRange)
         #self.l.addWidget(pw1,  0,  1)
         dock1=DockPlot(title="plot",  parent=self,  widget=pw1)
         #self.addDockWidget(QtCore.Qt.NoDockWidgetArea,  dock1)
         dock1.show()
+        return dock1
+
+    def addTimeline(self):
+        pw1 = TimeLinePlot(parent=self, dataRange=self.updater.mainDataRange)
+        dock1=DockPlot(title="Timeline",  parent=self,  widget=pw1)
+        dock1.show()
+        return dock1
+
 
     def addParamSlider(self):
         

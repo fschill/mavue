@@ -43,7 +43,6 @@ class TreeModel(QtCore.QAbstractItemModel):
             if index.column() == 0:
                 return str(node.name())
             if index.column() == 1:
-                    
                 return str(node.displayContent())
                 
         if role == QtCore.Qt.CheckStateRole and self.isMavlinkMessage(index) and index.column()==0:
