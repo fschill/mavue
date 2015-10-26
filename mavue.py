@@ -60,14 +60,14 @@ key_attribute_list=('_header.srcSystem',  '_header.srcComponent', 'name',  'para
 class Update_Thread():
     def __init__(self, parent, treeViewInstance):
         self._treeViewInstance= treeViewInstance
-        self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=False)
+        self.mavlinkReceiver=mavlink_receiver.MAVlinkReceiver(threading=True)
         self._parent = parent
         self.running=True
         self.lastTreeUpdate=time.time()
         self.treeUpdateFrequency=5.0
         self.t = QtCore.QTimer()
         self.t.timeout.connect(self.update)
-        self.t.start(1)
+        self.t.start(10)
         self.plugin_manager=plugins.plugin_manager(self.plugin_callback)
         self.timelinePlot = None
         self.mainDataRange=[-50, 0]
@@ -103,11 +103,11 @@ class Update_Thread():
             else:
                 break
 
-            #self._treeViewInstance.treeView.update()
-            if time.time()>self.lastTreeUpdate+1.0/(self.treeUpdateFrequency):
-                self._treeViewInstance.model.layoutChanged.emit()
-                self._treeViewInstance.rootNode.notifySubscribers()
-                self.lastTreeUpdate=time.time()
+        #self._treeViewInstance.treeView.update()
+        if time.time()>self.lastTreeUpdate+1.0/(self.treeUpdateFrequency):
+            self._treeViewInstance.model.layoutChanged.emit()
+            self._treeViewInstance.rootNode.notifySubscribers()
+            self.lastTreeUpdate=time.time()
 
     def reloadPlugins(self):
         global plugins

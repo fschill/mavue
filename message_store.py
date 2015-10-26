@@ -55,6 +55,9 @@ class RootNode(object):
         else:
             return self
 
+    def content(self):
+        return self._content
+
     def updateContent(self, key_attribute_list, content):
         msgNode=None
         if len(key_attribute_list) == 0:

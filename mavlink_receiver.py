@@ -122,7 +122,7 @@ class MAVlinkReceiver:
             msg = self.master.recv_msg()
             if msg!=None and msg.__class__.__name__!="MAVLink_bad_data":
                self.messageQueue.put(msg)
-            time.sleep(0.000001)
+            time.sleep(0.0001)
 
 
     def messagesAvailable(self):
