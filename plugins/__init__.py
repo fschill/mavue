@@ -8,13 +8,12 @@ Refer to the file LICENSE.TXT which should be included in all distributions of t
 '''
 
 
-from pyqtgraph.Qt import QtGui, QtCore
 import numpy 
-import pyqtgraph as pg
 import random
 from pymavlink import mavutil
-import time
 from  math import *
+import argparse
+
 
 class ReturnMessage(mavutil.mavlink.MAVLink_message):
     def __init__(self,  *kwargs):
@@ -32,7 +31,15 @@ import debugger
 class plugin_manager():
     
     def __init__(self,  plugin_callback):
-        self.active_plugins=[]#[debugger.Debugger()]#[distance_kalman_filter()]
+        parser =  argparse.ArgumentParser("[plugin_options]")
+
+        parser.add_argument("--p_debug_elf", dest="p_debug_elf",  help="ELF file for debug information", default="")
+        (opts, args) = parser.parse_known_args()
+        
+        self.active_plugins=[]#[distance_kalman_filter()]
+        if opts.p_debug_elf!="":
+            self.active_plugins.append(debugger.Debugger(elf_filename= opts.p_debug_elf))
+        
         self.plugin_callback=plugin_callback
         
     def run_plugins(self,  message):

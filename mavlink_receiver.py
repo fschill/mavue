@@ -19,25 +19,27 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), '.'
 #import  mavutil
 from pymavlink import mavutil
 
-from optparse import OptionParser
+#from optparse import OptionParser
+import argparse
 
 class MAVlinkReceiver:
     def __init__(self, threading=True):
-        parser = OptionParser("mavue.py [options]")
+        parser =  argparse.ArgumentParser("mavue.py [options]")
 
-        parser.add_option("--baudrate", dest="baudrate", type='int',
+        parser.add_argument("--baudrate", dest="baudrate", type=int,
                   help="master port baud rate", default=115200)
-        parser.add_option("--device", dest="device", default="", help="serial device")
-        parser.add_option("--dialect", dest="dialect", default="auv", help="Mavlink dialect")
-        parser.add_option("--logfile", dest="logfile_raw", default="", help="output log file")
-        parser.add_option("--notimestamps", dest="notimestamps", default="true", help="logfile format")
-        parser.add_option("--source-system", dest='SOURCE_SYSTEM', type='int',
+        parser.add_argument("--device", dest="device", default="", help="serial device")
+        parser.add_argument("--dialect", dest="dialect", default="auv", help="Mavlink dialect")
+        parser.add_argument("--logfile", dest="logfile_raw", default="", help="output log file")
+        parser.add_argument("--notimestamps", dest="notimestamps", default="true", help="logfile format")
+        parser.add_argument("--source-system", dest='SOURCE_SYSTEM', type=int,
                   default=255, help='MAVLink source system for this GCS')
-        (opts, args) = parser.parse_args()
+        (opts, args) = parser.parse_known_args()
         self.opts=opts
         self.serialPorts=self.scanForSerials()
         self.threading=threading
-
+        self.severity = ["EMERGENCY",  "ALERT",  "CRITICAL",  "ERROR",  "WARNING",  "NOTICE",  "INFO",  "DEBUG_0",  "DEBUG_1",  "DEBUG_2",  "DEBUG_3"]
+        
         print "auto-detected serial ports:"
         for s in self.serialPorts:
             print s.device
@@ -178,7 +180,7 @@ class MAVlinkReceiver:
                 #    return "", None; 
 
             if msg.__class__.__name__=="MAVLink_statustext_message":
-                print("STATUS ("+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
+                print(self.severity[getattr(msg,  "severity")]+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
 
             msg.key=msg_key
             return msg_key,  msg;

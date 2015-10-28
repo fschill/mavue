@@ -7,17 +7,18 @@ from elftools.elf.elffile import ELFFile
 import os
 
 class Debugger(plugins.Plugin):
-    def __init__(self):
+    def __init__(self,  elf_filename = ""):
         self.severity = ["EMERGENCY",  "ALERT",  "CRITICAL",  "ERROR",  "WARNING",  "NOTICE",  "INFO",  "DEBUG_0",  "DEBUG_1",  "DEBUG_2",  "DEBUG_3"]
-        self.elf_filename = "../Power/Debug_Linux/Power.elf"
-        self.load_elf_file(self.elf_filename)
+        self.elf_filename = elf_filename
+        if elf_filename!="":
+            self.load_elf_file(self.elf_filename)
                 
     def filter(self,  message):
         return message.__class__.__name__.startswith("MAVLink_statustext_message")
 
              
     def run(self,  message): 
-        print(self.severity[getattr(message,  "severity")]+"("+str(message._header.srcSystem)+":"+ str(message._header.srcComponent)+"): "+getattr(message,  "text")+"\n" )
+        #print(self.severity[getattr(message,  "severity")]+"("+str(message._header.srcSystem)+":"+ str(message._header.srcComponent)+"): "+getattr(message,  "text")+"\n" )
         
         text = getattr(message,  "text").split()
         if (len(text)>1 and text[1].startswith("0x8")):
