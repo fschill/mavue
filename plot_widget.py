@@ -334,6 +334,11 @@ class TimeLinePlot(DropPlot):
     def sizeHint(self):
         return QtCore.QSize(800, 150)
 
+    def closeEvent(self,  event):
+        DropPlot.closeEvent(self,  event)
+        self.dataRange[0]=-200
+        self.dataRange[1]=0
+        
 
 class DockPlot(QtGui.QDialog):
     def __init__(self,  title="Plot",  parent=None,  widget=None):

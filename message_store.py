@@ -302,6 +302,8 @@ class ValueNode(RootNode):
         return self._content
 
     def findTraceIndex(self, counterValue):
+        if counterValue < 0:
+            return counterValue
         start = 0
         end = len(self.counterTrace)
         while end-start>1:
@@ -310,11 +312,11 @@ class ValueNode(RootNode):
                 end = middle
             else:
                 start = middle
-
         return start
 
 
     def getTrace(self, range=[-100, 0]):
+
         if range[1]==0:
             return self.trace[self.findTraceIndex(range[0]):]
         else:

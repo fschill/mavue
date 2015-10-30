@@ -70,7 +70,7 @@ class Update_Thread():
         self.t.start(5)
         self.plugin_manager=plugins.plugin_manager(self.plugin_callback)
         self.timelinePlot = None
-        self.mainDataRange=[-50, 0]
+        self.mainDataRange=[-200, 0]
         
     def plugin_callback(self,  msg):
         if msg!=None:

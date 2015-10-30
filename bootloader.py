@@ -294,7 +294,7 @@ class DeviceActions(ItemWithParameters,  Plugin):
                         # wait for acknowledgement with a timeout of 0.5 seconds
                        # print "waiting for ack"
                         try:
-                            receivedAck=self.ack_msg_queue.get(True,  0.5)
+                            receivedAck=self.ack_msg_queue.get(True,  0.2)
                             recId=receivedAck.session_message_counter
                             #print "recv: %02X"%receivedAck.param_address
                             if recId in sentMessages:  # ack with correct sequence received?
