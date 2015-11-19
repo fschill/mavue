@@ -166,15 +166,18 @@ class MAVlinkReceiver:
             if msg.__class__.__name__.startswith("MAVLink_raw_data_stream"):
                 msg_key="%s:%s:%s"%(msg.get_srcSystem(),  msg.__class__.__name__, msg.stream_id)
                 block_size=len(msg.values)
-                all_values=[0 for x in range(0, msg.packets_per_block*block_size)]
+                #assemble multi-packet blocks if packets_per_block is greater than 0:
+                if msg.packets_per_block>0:
+                    all_values=[0 for x in range(0, msg.packets_per_block*block_size)]
 
-                if msg_key in self.messages:
-                    all_values=self.messages[msg_key].values
+                    if msg_key in self.messages:
+                        all_values=self.messages[msg_key].values
 
-                for i in range(0, block_size):
-                    all_values[i+ msg.packet_id*block_size]=msg.values[i]
+                    for i in range(0, block_size):
+                        all_values[i+ msg.packet_id*block_size]=msg.values[i]
 
-                msg.values=all_values
+                    msg.values=all_values
+
                 self.messages[msg_key]=msg
                 #if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
                 #    return "", None; 
