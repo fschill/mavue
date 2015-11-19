@@ -28,19 +28,35 @@ class HorizontalBar(QtGui.QWidget):
         
 
 class PlainComboField(QtGui.QComboBox):
-    def __init__(self, parent=None,  label="", value=None,  choices=None):
-        QtGui.QWidget.__init__( self, parent=parent)
+    def __init__(self, parent=None,  label="", value=None,  choices=None,  onOpenCallback=None):
+        QtGui.QComboBox.__init__( self, parent=parent)
+        self.choices = choices
+        self.onOpenCallback = onOpenCallback
         if not value in choices:
-            choices.append(value)
+            self.choices.append(value)
         for t in choices:
             self.addItem(QString(t))
         if value!=None:
-            self.setCurrentIndex(choices.index(value))
+            self.setCurrentIndex(self.choices.index(value))
         self.combo=self
 
     def updateValue(self,  value):
         if value!=None:
-            self.combo.setCurrentIndex(choices.index(value))
+            self.combo.setCurrentIndex(self.choices.index(value))
+            
+    def showPopup(self):
+        if self.onOpenCallback!=None:
+            self.onOpenCallback()
+        QtGui.QComboBox.showPopup(self)
+         
+    def updateChoices(self,  choices):
+        self.clear()
+        
+        self.choices = choices
+        for t in choices:
+            self.addItem(QString(t))
+        
+        
 
 class LabeledComboField(QtGui.QWidget):
     def __init__(self, parent=None,  label="", value=None,  choices=None):

@@ -180,7 +180,7 @@ class MAVlinkReceiver:
                 #    return "", None; 
 
             if msg.__class__.__name__=="MAVLink_statustext_message":
-                print(self.severity[getattr(msg,  "severity")]+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
+                print(self.severity[getattr(msg,  "severity")]+" "+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
 
             msg.key=msg_key
             return msg_key,  msg;

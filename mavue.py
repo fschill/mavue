@@ -136,6 +136,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.serialPorts= self.updater.mavlinkReceiver.scanForSerials()
         print self.serialPorts
+
         self.setWindowTitle('MavLink viewer')
         self.resize(500,900)
         cw = QtGui.QWidget()
@@ -152,8 +153,9 @@ class MainWindow(QtGui.QMainWindow):
         self.widgetbarLayout=QtGui.QHBoxLayout()
         self.widgetbar.setLayout(self.widgetbarLayout)
         
-        self.serialSelect=gui_elements.PlainComboField(parent=self,  label='Serial port',  choices=['udp:localhost:14550']+[s.device for s in self.serialPorts],  value=self.updater.mavlinkReceiver.opts.device)
+        self.serialSelect=gui_elements.PlainComboField(parent=self,  label='Serial port',  choices=['udp:localhost:14550']+[s.device for s in self.serialPorts],  value=self.updater.mavlinkReceiver.opts.device,  onOpenCallback = self.rescanForSerials)
         self.connect(self.serialSelect,  QtCore.SIGNAL("currentIndexChanged(const QString&)"),  self.openConnection)
+
         
         self.menubarLayout.addWidget(self.serialSelect)
         self.refreshButton=QtGui.QPushButton("refresh")
@@ -194,6 +196,12 @@ class MainWindow(QtGui.QMainWindow):
         #self.addPlot()
         
         self.show()
+        
+    def rescanForSerials(self):
+        self.serialPorts= self.updater.mavlinkReceiver.scanForSerials()
+        print self.serialPorts
+        self.serialSelect.updateChoices(['udp:localhost:14550']+[s.device for s in self.serialPorts]) 
+
         
     def addPlot(self):
         pw1 = DropPlot(parent=self, dataRange=self.updater.mainDataRange)
