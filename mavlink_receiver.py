@@ -176,7 +176,7 @@ class MAVlinkReceiver:
                     for i in range(0, block_size):
                         all_values[i+ msg.packet_id*block_size]=msg.values[i]
 
-                msg.values=all_values
+                    msg.values=all_values
 
                 self.messages[msg_key]=msg
                 #if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
