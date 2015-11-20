@@ -149,6 +149,9 @@ class Curve2DBox(QtGui.QWidget):
         if len(xdata)==0:
             #xdata=[i for i in range(0, length)]
             xdata = self.sources[1].source.getCounterTrace(self.dataRange)
+            if len(xdata)!=len(ydata):
+                xdata=[i for i in range(0, length)]
+
         if len(ydata)==0:
             ydata=[i for i in range(0, length)]
             
