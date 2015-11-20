@@ -90,6 +90,10 @@ class DropTarget(QtGui.QWidget):
         else:
             return self.source.getTrace(self.myParent.dataRange)
 
+    def getCurrent(self):
+        if self.source==None:
+            return []
+        return self.source.content()
 
 class Curve2DBox(QtGui.QWidget):
     def __init__(self,text, parent, dataRange=[-100, 0],  color=QtGui.QColor(0, 0, 0)):
@@ -382,7 +386,7 @@ class ParamSlider(QtGui.QDialog):
         
     def updateValue(self):
         self.setWindowTitle(self.target.currentName)
-        newValue=int(self.scaling*self.target.getData()[-1])
+        newValue=int(self.scaling*self.target.getCurrent())
         self.emitChange=False
         if newValue<self.slider.minimum():
             self.slider.setMinimum(newValue)
