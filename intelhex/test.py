@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2005-2013, Alexander Belchenko
+# Copyright (c) 2005-2015, Alexander Belchenko
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms,
@@ -36,33 +36,46 @@
 """Test suite for IntelHex class."""
 
 import array
-from cStringIO import StringIO
 import os
+import shlex
+import subprocess
 import sys
 import tempfile
 import unittest
 
-from compat import asbytes, asstr
 import intelhex
-from intelhex import IntelHex, \
-                     IntelHexError, \
-                     HexReaderError, \
-                     AddressOverlapError, \
-                     HexRecordError, \
-                     RecordLengthError, \
-                     RecordTypeError, \
-                     RecordChecksumError, \
-                     EOFRecordError, \
-                     ExtendedSegmentAddressRecordError, \
-                     ExtendedLinearAddressRecordError, \
-                     StartSegmentAddressRecordError, \
-                     StartLinearAddressRecordError, \
-                     DuplicateStartAddressRecordError, \
-                     InvalidStartAddressValueError, \
-                     _EndOfFile, \
-                     BadAccess16bit, \
-                     hex2bin, \
-                     Record
+from intelhex import (
+    IntelHex,
+    IntelHexError,
+    HexReaderError,
+    AddressOverlapError,
+    HexRecordError,
+    RecordLengthError,
+    RecordTypeError,
+    RecordChecksumError,
+    EOFRecordError,
+    ExtendedSegmentAddressRecordError,
+    ExtendedLinearAddressRecordError,
+    StartSegmentAddressRecordError,
+    StartLinearAddressRecordError,
+    DuplicateStartAddressRecordError,
+    InvalidStartAddressValueError,
+    _EndOfFile,
+    BadAccess16bit,
+    hex2bin,
+    Record,
+    )
+from intelhex import compat
+from intelhex.compat import (
+    BytesIO,
+    StringIO,
+    UnicodeType,
+    asbytes,
+    asstr,
+    dict_items_g,
+    range_g,
+    range_l,
+    )
 
 
 __docformat__ = 'restructuredtext'
@@ -376,7 +389,8 @@ class TestIntelHexBase(unittest.TestCase):
         """
         try:
             callableObj(*args, **kwargs)
-        except excClass, exc:
+        except excClass:
+            exc = sys.exc_info()[1]     # current exception
             excMsg = str(exc)
             if not msg:
                 # No message provided: any message is fine.
@@ -422,7 +436,7 @@ class TestIntelHex(TestIntelHexBase):
 
     def test_init_from_file(self):
         ih = IntelHex(self.f)
-        for addr in xrange(len(bin8)):
+        for addr in range_g(len(bin8)):
             expected = bin8[addr]
             actual = ih[addr]
             self.assertEqual(expected, actual,
@@ -432,7 +446,7 @@ class TestIntelHex(TestIntelHexBase):
     def test_hex_fromfile(self):
         ih = IntelHex()
         ih.fromfile(self.f, format='hex')
-        for addr in xrange(len(bin8)):
+        for addr in range_g(len(bin8)):
             expected = bin8[addr]
             actual = ih[addr]
             self.assertEqual(expected, actual,
@@ -440,10 +454,10 @@ class TestIntelHex(TestIntelHexBase):
                              "%x (%x != %x)" % (addr, expected, actual))
 
     def test_unicode_filename(self):
-        handle, fname = tempfile.mkstemp(u'')
+        handle, fname = tempfile.mkstemp(UnicodeType(''))
         os.close(handle)
         try:
-            self.assertTrue(isinstance(fname, unicode))
+            self.assertTrue(isinstance(fname, UnicodeType))
             f = open(fname, 'w')
             try:
                 f.write(hex8)
@@ -481,24 +495,32 @@ class TestIntelHex(TestIntelHexBase):
     def test_tobinstr(self):
         ih = IntelHex(self.f)
         s1 = ih.tobinstr()
-        s2 = asstr(bin8.tostring())
+        s2 = asbytes(bin8.tostring())
         self.assertEqual(s2, s1, "data not equal\n%s\n\n%s" % (s1, s2))
 
     def test_tobinfile(self):
         ih = IntelHex(self.f)
-        sio = StringIO()
+        sio = BytesIO()
         ih.tobinfile(sio)
         s1 = sio.getvalue()
         sio.close()
-        s2 = asstr(bin8.tostring())
+        s2 = asbytes(bin8.tostring())
         self.assertEqual(s2, s1, "data not equal\n%s\n\n%s" % (s1, s2))
         # new API: .tofile universal method
-        sio = StringIO()
+        sio = BytesIO()
         ih.tofile(sio, format='bin')
         s1 = sio.getvalue()
         sio.close()
-        s2 = asstr(bin8.tostring())
+        s2 = asbytes(bin8.tostring())
         self.assertEqual(s2, s1, "data not equal\n%s\n\n%s" % (s1, s2))
+
+    def test_tobinfile_realfile(self):
+        ih = IntelHex(self.f)
+        tf = tempfile.TemporaryFile(mode='wb')
+        try:
+            ih.tobinfile(tf)
+        finally:
+            tf.close()
 
     def test_write_empty_hexfile(self):
         ih = intelhex.IntelHex()
@@ -648,15 +670,15 @@ class TestIntelHex(TestIntelHexBase):
             "Address has unsupported type: %s" % type('foo'),
             setitem, 'foo', 0)
         # slice operations
-        ih[0:4] = range(4)
+        ih[0:4] = range_l(4)
         self.assertEquals({0:0, 1:1, 2:2, 3:3}, ih.todict())
-        ih[0:] = range(5,9)
+        ih[0:] = range_l(5,9)
         self.assertEquals({0:5, 1:6, 2:7, 3:8}, ih.todict())
-        ih[:4] = range(9,13)
+        ih[:4] = range_l(9,13)
         self.assertEquals({0:9, 1:10, 2:11, 3:12}, ih.todict())
         # with step
         ih = IntelHex()
-        ih[0:8:2] = range(4)
+        ih[0:8:2] = range_l(4)
         self.assertEquals({0:0, 2:1, 4:2, 6:3}, ih.todict())
         # errors in slice operations
         # ih[1:2] = 'a'
@@ -700,7 +722,7 @@ class TestIntelHex(TestIntelHexBase):
         #
         def ihex(size=8):
             ih = IntelHex()
-            for i in xrange(size):
+            for i in range_g(size):
                 ih[i] = i
             return ih
         ih = ihex(8)
@@ -744,8 +766,8 @@ class TestIntelHex(TestIntelHexBase):
 class TestIntelHexLoadBin(TestIntelHexBase):
 
     def setUp(self):
-        self.data = '0123456789'
-        self.f = StringIO(self.data)
+        self.bytes = asbytes('0123456789')
+        self.f = BytesIO(self.bytes)
 
     def tearDown(self):
         self.f.close()
@@ -755,28 +777,28 @@ class TestIntelHexLoadBin(TestIntelHexBase):
         ih.loadbin(self.f)
         self.assertEqual(0, ih.minaddr())
         self.assertEqual(9, ih.maxaddr())
-        self.assertEqual(self.data, ih.tobinstr())
+        self.assertEqual(self.bytes, ih.tobinstr())
 
     def test_bin_fromfile(self):
         ih = IntelHex()
         ih.fromfile(self.f, format='bin')
         self.assertEqual(0, ih.minaddr())
         self.assertEqual(9, ih.maxaddr())
-        self.assertEqual(self.data, ih.tobinstr())
+        self.assertEqual(self.bytes, ih.tobinstr())
 
     def test_loadbin_w_offset(self):
         ih = IntelHex()
         ih.loadbin(self.f, offset=100)
         self.assertEqual(100, ih.minaddr())
         self.assertEqual(109, ih.maxaddr())
-        self.assertEqual(self.data, ih.tobinstr())
+        self.assertEqual(self.bytes, ih.tobinstr())
 
     def test_loadfile_format_bin(self):
         ih = IntelHex()
         ih.loadfile(self.f, format='bin')
         self.assertEqual(0, ih.minaddr())
         self.assertEqual(9, ih.maxaddr())
-        self.assertEqual(self.data, ih.tobinstr())
+        self.assertEqual(self.bytes, ih.tobinstr())
 
 
 class TestIntelHexStartingAddressRecords(TestIntelHexBase):
@@ -847,7 +869,7 @@ class TestIntelHex_big_files(TestIntelHexBase):
 
     def test_readfile(self):
         ih = intelhex.IntelHex(self.f)
-        for addr, byte in data64k.items():
+        for addr, byte in dict_items_g(data64k):
             readed = ih[addr]
             self.assertEquals(byte, readed,
                               "data not equal at addr %X "
@@ -866,7 +888,7 @@ class TestIntelHexGetPutString(TestIntelHexBase):
 
     def setUp(self):
         self.ih = IntelHex()
-        for i in xrange(10):
+        for i in range_g(10):
             self.ih[i] = i
 
     def test_gets(self):
@@ -1369,7 +1391,7 @@ class TestHex2Bin(unittest.TestCase):
 
     def setUp(self):
         self.fin = StringIO(hex8)
-        self.fout = StringIO()
+        self.fout = BytesIO()
 
     def tearDown(self):
         self.fin.close()
@@ -1378,7 +1400,7 @@ class TestHex2Bin(unittest.TestCase):
     def test_hex2bin(self):
         ih = hex2bin(self.fin, self.fout)
         data = array.array('B', asbytes(self.fout.getvalue()))
-        for addr in xrange(len(bin8)):
+        for addr in range_g(len(bin8)):
             expected = bin8[addr]
             actual = data[addr]
             self.assertEqual(expected, actual,
@@ -1476,6 +1498,63 @@ class Test_GetFileAndAddrRange(TestIntelHexBase):
         self.assertEqual(('C:\\filename.hex', 1, 10),
             intelhex._get_file_and_addr_range('C:\\filename.hex:0001:000A', True))
 
+
+class TestXrangeLongInt(unittest.TestCase):
+
+    def test_xrange_longint(self):
+        # Bug #1408934: xrange(longint) blows with OverflowError:
+        if compat.Python == 2:
+            self.assertRaises(OverflowError, xrange, 2684625744, 2684625747)
+        #
+        upr = compat.range_g(2684625744, 2684625747)
+        self.assertEqual([2684625744, 2684625745, 2684625746], list(upr))
+        upr = compat.range_g(2684625744, 2684625747, 2)
+        self.assertEqual([2684625744, 2684625746], list(upr))
+        #
+        dnr = compat.range_g(2684625746, 2684625743, -1)
+        self.assertEqual([2684625746, 2684625745, 2684625744], list(dnr))
+        dnr = compat.range_g(2684625746, 2684625743, -2)
+        self.assertEqual([2684625746, 2684625744], list(dnr))
+
+
+class TestInSubprocess(unittest.TestCase):
+
+    def runProcessAndGetAsciiStdoutOrStderr(self, cmdline):
+        if sys.platform != 'win32':
+            cmdline = shlex.split(cmdline)
+        p = subprocess.Popen(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        retcode = p.poll()
+        if stdout:
+            output = stdout.decode('ascii', 'replace')
+        elif stderr:
+            output = stderr.decode('ascii', 'replace')        
+        output = output.replace('\r', '')
+        return retcode, output
+
+    def versionChecker(self, cmdline_template):
+        cmdline = cmdline_template % sys.executable
+        retcode, output = self.runProcessAndGetAsciiStdoutOrStderr(cmdline)
+        self.assertEqual(intelhex.__version__, output.rstrip())
+        self.assertEqual(0, retcode)
+
+    def test_setup_version(self):
+        self.versionChecker('%s setup.py --version')
+
+    def test_sripts_bin2hex_version(self):
+        self.versionChecker('%s scripts/bin2hex.py --version')
+
+    def test_sripts_hex2bin_version(self):
+        self.versionChecker('%s scripts/hex2bin.py --version')
+
+    def test_sripts_hex2dump_version(self):
+        self.versionChecker('%s scripts/hex2dump.py --version')
+
+    def test_sripts_hexdiff_version(self):
+        self.versionChecker('%s scripts/hexdiff.py --version')
+
+    def test_sripts_hexmerge_version(self):
+        self.versionChecker('%s scripts/hexmerge.py --version')
 
 ##
 # MAIN
