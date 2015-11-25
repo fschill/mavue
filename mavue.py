@@ -182,15 +182,18 @@ class MainWindow(QtGui.QMainWindow):
         self.l.addWidget(self.messageTreeView.treeView,  1,  0)  
         self.l.addWidget(self.widgetbar)
         
-        self.addButton=QtGui.QPushButton("add plot")
+        self.addButton=QtGui.QPushButton("new plot")
         self.connect(self.addButton,  QtCore.SIGNAL("clicked()"),  self.addPlot)
         
         self.widgetbarLayout.addWidget(self.addButton)
 
-        self.addParamButton=QtGui.QPushButton("add param-slider")
+        self.addParamButton=QtGui.QPushButton("param-slider")
         self.connect(self.addParamButton,  QtCore.SIGNAL("clicked()"),  self.addParamSlider)        
         self.widgetbarLayout.addWidget(self.addParamButton)
 
+        self.addTimelineButton=QtGui.QPushButton("timeline")
+        self.connect(self.addTimelineButton,  QtCore.SIGNAL("clicked()"),  self.addTimeline)        
+        self.widgetbarLayout.addWidget(self.addTimelineButton)
         
         #self.addPlot()
         #self.addPlot()

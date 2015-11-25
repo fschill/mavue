@@ -36,7 +36,7 @@ class Plane:
        self.altitude=altitude
        self.longitude=longitude
        self.latitude=latitude
-
+       self.trace=[]
 
     def update(self,  longitude=None,  latitude=None,  altitude=None,  heading=None,  tilt=None,  roll=None):
 
@@ -46,6 +46,8 @@ class Plane:
         if altitude!=None: self.altitude=altitude
         if longitude!=None: self.longitude=longitude
         if latitude!=None: self.latitude=latitude
+        if longitude!=None and latitude!=None:
+            self.trace.append([self.longitude,  self.latitude,  self.altitude])
 
 #Create custom HTTPRequestHandler class
 class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -60,21 +62,36 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
         <roll>%f</roll> \
         <altitudeMode>absolute</altitudeMode> \
         </Camera>" % (longitude, latitude, altitude, heading, tilt, roll)
-    
+
+    def makeTrace(self, trace):
+        coordinate_string =""
+        for p in trace:
+            coordinate_string+="%f,%f,%f "%(p[0],  p[1],  p[2])
+        return\
+    """<Placemark>
+<name>Trace</name>
+<styleUrl>#m_ylw-pushpin0</styleUrl>
+<LineString>
+<tessellate>1</tessellate>
+<coordinates>
+%s 
+</coordinates>
+</LineString>
+</Placemark>"""% coordinate_string
+
     def makeModel(self, longitude, latitude, altitude, heading, tilt, roll) :
     	return \
 """<Placemark><name>"heli"</name><styleUrl>#m_ylw-pushpin</styleUrl>
 <Model id="model1"> 
 <Link>
    <href>file:///Users/felix/Research/Projects/GIS/models/heli.dae</href>
-</Link>
-
+</Link>   
 <Location><longitude> %f</longitude> <latitude>%f</latitude> <altitude>%f</altitude> </Location>
 <Orientation><heading>%f</heading> <tilt>%f</tilt> <roll>%f</roll> </Orientation>
 <altitudeMode>absolute</altitudeMode> 
 <Scale><x>1</x><y>1</y><z>1</z></Scale>
 </Model></Placemark>""" % (longitude, latitude, altitude, heading, tilt, roll)
-    
+ 
     #handle GET command
     def do_GET(self):
         p=GoogleEarthServer.plane
@@ -89,11 +106,13 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
             #send file content to client
             kml=KmlHeader + "<Document> <name>tracking.kml</name>" \
                 + self.makeView(p.longitude, p.latitude, p.altitude, p.heading, p.tilt, p.roll) \
+                + self.makeModel(p.longitude, p.latitude+0.003, p.altitude, p.heading, p.tilt, p.roll) \
+                + self.makeTrace(p.trace) \
                 + "</Document></kml>"
  
  #               + self.makeModel(p.longitude, p.latitude+0.003, p.altitude, p.heading, p.tilt, p.roll) \
             
-            print kml
+            #print kml
             self.wfile.write(kml)
             
         except IOError:
