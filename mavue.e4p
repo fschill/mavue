@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project mavue -->
-<!-- Saved: 2015-09-04, 11:42:47 -->
+<!-- Saved: 2015-11-27, 11:28:45 -->
 <!-- Copyright (C) 2015 ,  -->
 <Project version="5.1">
   <Language>en</Language>
@@ -38,6 +38,81 @@
     <Source>plugins/__init__.py</Source>
     <Source>plugins/debugger/__init__.py</Source>
     <Source>plugins/plugin_manager.py</Source>
+    <Source>pyelftools/setup.py</Source>
+    <Source>pyelftools/z.py</Source>
+    <Source>pyelftools/elftools/__init__.py</Source>
+    <Source>pyelftools/elftools/dwarf/locationlists.py</Source>
+    <Source>pyelftools/elftools/dwarf/dwarfinfo.py</Source>
+    <Source>pyelftools/elftools/dwarf/callframe.py</Source>
+    <Source>pyelftools/elftools/dwarf/constants.py</Source>
+    <Source>pyelftools/elftools/dwarf/enums.py</Source>
+    <Source>pyelftools/elftools/dwarf/descriptions.py</Source>
+    <Source>pyelftools/elftools/dwarf/__init__.py</Source>
+    <Source>pyelftools/elftools/dwarf/die.py</Source>
+    <Source>pyelftools/elftools/dwarf/abbrevtable.py</Source>
+    <Source>pyelftools/elftools/dwarf/structs.py</Source>
+    <Source>pyelftools/elftools/dwarf/ranges.py</Source>
+    <Source>pyelftools/elftools/dwarf/lineprogram.py</Source>
+    <Source>pyelftools/elftools/dwarf/dwarf_expr.py</Source>
+    <Source>pyelftools/elftools/dwarf/compileunit.py</Source>
+    <Source>pyelftools/elftools/elf/constants.py</Source>
+    <Source>pyelftools/elftools/elf/enums.py</Source>
+    <Source>pyelftools/elftools/elf/descriptions.py</Source>
+    <Source>pyelftools/elftools/elf/__init__.py</Source>
+    <Source>pyelftools/elftools/elf/sections.py</Source>
+    <Source>pyelftools/elftools/elf/structs.py</Source>
+    <Source>pyelftools/elftools/elf/dynamic.py</Source>
+    <Source>pyelftools/elftools/elf/relocation.py</Source>
+    <Source>pyelftools/elftools/elf/elffile.py</Source>
+    <Source>pyelftools/elftools/elf/segments.py</Source>
+    <Source>pyelftools/elftools/elf/gnuversions.py</Source>
+    <Source>pyelftools/elftools/common/__init__.py</Source>
+    <Source>pyelftools/elftools/common/py3compat.py</Source>
+    <Source>pyelftools/elftools/common/utils.py</Source>
+    <Source>pyelftools/elftools/common/construct_utils.py</Source>
+    <Source>pyelftools/elftools/common/exceptions.py</Source>
+    <Source>pyelftools/elftools/construct/core.py</Source>
+    <Source>pyelftools/elftools/construct/__init__.py</Source>
+    <Source>pyelftools/elftools/construct/macros.py</Source>
+    <Source>pyelftools/elftools/construct/adapters.py</Source>
+    <Source>pyelftools/elftools/construct/debug.py</Source>
+    <Source>pyelftools/elftools/construct/lib/bitstream.py</Source>
+    <Source>pyelftools/elftools/construct/lib/__init__.py</Source>
+    <Source>pyelftools/elftools/construct/lib/py3compat.py</Source>
+    <Source>pyelftools/elftools/construct/lib/binary.py</Source>
+    <Source>pyelftools/elftools/construct/lib/hex.py</Source>
+    <Source>pyelftools/elftools/construct/lib/container.py</Source>
+    <Source>pyelftools/test/test_arm_support.py</Source>
+    <Source>pyelftools/test/test_dynamic.py</Source>
+    <Source>pyelftools/test/__init__.py</Source>
+    <Source>pyelftools/test/test_solaris_support.py</Source>
+    <Source>pyelftools/test/test_dwarf_range_lists.py</Source>
+    <Source>pyelftools/test/run_examples_test.py</Source>
+    <Source>pyelftools/test/utils.py</Source>
+    <Source>pyelftools/test/test_utils.py</Source>
+    <Source>pyelftools/test/all_tests.py</Source>
+    <Source>pyelftools/test/test_dwarf_expr.py</Source>
+    <Source>pyelftools/test/run_readelf_tests.py</Source>
+    <Source>pyelftools/test/test_double_dynstr_section.py</Source>
+    <Source>pyelftools/test/test_mips_support.py</Source>
+    <Source>pyelftools/test/test_elffile.py</Source>
+    <Source>pyelftools/test/test_get_symbol_by_name.py</Source>
+    <Source>pyelftools/test/test_callframe.py</Source>
+    <Source>pyelftools/test/run_all_unittests.py</Source>
+    <Source>pyelftools/test/test_dwarf_structs.py</Source>
+    <Source>pyelftools/test/test_gnuversions.py</Source>
+    <Source>pyelftools/test/test_dwarf_lineprogram.py</Source>
+    <Source>pyelftools/examples/dwarf_range_lists.py</Source>
+    <Source>pyelftools/examples/dwarf_decode_address.py</Source>
+    <Source>pyelftools/examples/elf_show_debug_sections.py</Source>
+    <Source>pyelftools/examples/dwarf_location_lists.py</Source>
+    <Source>pyelftools/examples/dwarf_die_tree.py</Source>
+    <Source>pyelftools/examples/elf_low_high_api.py</Source>
+    <Source>pyelftools/examples/elf_relocations.py</Source>
+    <Source>pyelftools/examples/elfclass_address_size.py</Source>
+    <Source>pyelftools/examples/examine_dwarf_info.py</Source>
+    <Source>pyelftools/scripts/readelf.py</Source>
+    <Source>size_browser.py</Source>
   </Sources>
   <Forms/>
   <Translations/>
