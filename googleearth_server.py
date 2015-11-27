@@ -28,18 +28,18 @@ def radianToSymDegree(alpha):
     while alpha>math.pi: alpha-=2.0*math.pi
     return alpha*180.0/math.pi
 
-class Plane:
-    def __init__(self,  longitude=6.566044801857777,  latitude=46.51852236174565,  altitude=440,  heading=0.0,  tilt=0.0,  roll=0.0):
-       self.heading=radianToPosDegree(heading)
-       self.tilt=radianToPosDegree(90+tilt)
-       self.roll=radianToSymDegree(-roll)
-       self.altitude=altitude
-       self.longitude=longitude
-       self.latitude=latitude
-       self.trace=[]
+class Trace:
+    def __init__(self, name="Track",  longitude=6.566044801857777,  latitude=46.51852236174565,  altitude=440,  heading=0.0,  tilt=0.0,  roll=0.0):
+        self.name=name
+        self.heading=radianToPosDegree(heading)
+        self.tilt=radianToPosDegree(90+tilt)
+        self.roll=radianToSymDegree(-roll)
+        self.altitude=altitude
+        self.longitude=longitude
+        self.latitude=latitude
+        self.trace=[]
 
     def update(self,  longitude=None,  latitude=None,  altitude=None,  heading=None,  tilt=None,  roll=None):
-
         if heading!=None: self.heading=radianToPosDegree(heading)
         if tilt!=None: self.tilt=radianToPosDegree(math.pi/2.0+tilt)
         if roll!=None: self.roll=radianToSymDegree(-roll)
@@ -51,17 +51,17 @@ class Plane:
 
 #Create custom HTTPRequestHandler class
 class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
-
         
     def makeView(self, longitude, latitude, altitude, heading, tilt, roll):
-       return "<Camera> <longitude> %f</longitude> \
+       return "<Placemark> <name>3D View</name>\
+        <Camera> <longitude> %f</longitude> \
         <latitude>%f</latitude> \
         <altitude>%f</altitude> \
         <heading>%f</heading> \
         <tilt>%f</tilt> \
         <roll>%f</roll> \
         <altitudeMode>absolute</altitudeMode> \
-        </Camera>" % (longitude, latitude, altitude, heading, tilt, roll)
+        </Camera></Placemark>" % (longitude, latitude, altitude, heading, tilt, roll)
 
     def makeTrace(self, trace):
         coordinate_string =""
@@ -81,20 +81,18 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def makeModel(self, longitude, latitude, altitude, heading, tilt, roll) :
     	return \
-"""<Placemark><name>"heli"</name><styleUrl>#m_ylw-pushpin</styleUrl>
+"""<Placemark><name>"Model"</name><styleUrl>#m_ylw-pushpin</styleUrl>
 <Model id="model1"> 
-<Link>
-   <href>file:///Users/felix/Research/Projects/GIS/models/heli.dae</href>
-</Link>   
 <Location><longitude> %f</longitude> <latitude>%f</latitude> <altitude>%f</altitude> </Location>
 <Orientation><heading>%f</heading> <tilt>%f</tilt> <roll>%f</roll> </Orientation>
 <altitudeMode>absolute</altitudeMode> 
 <Scale><x>1</x><y>1</y><z>1</z></Scale>
 </Model></Placemark>""" % (longitude, latitude, altitude, heading, tilt, roll)
- 
+#<Link>
+#   <href>file:///Users/felix/Research/Projects/GIS/models/heli.dae</href>
+#</Link>    
     #handle GET command
     def do_GET(self):
-        p=GoogleEarthServer.plane
         try:
             #print self.path
             self.send_response(200)
@@ -104,12 +102,14 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
  
             #send file content to client
-            kml=KmlHeader + "<Document> <name>tracking.kml</name>" \
+            kml=KmlHeader+"<Document> <name>Mavue Traces</name>"
+            for key, p in GoogleEarthServer.traces.items():
+                kml = kml \
                 + self.makeView(p.longitude, p.latitude, p.altitude, p.heading, p.tilt, p.roll) \
                 + self.makeModel(p.longitude, p.latitude+0.003, p.altitude, p.heading, p.tilt, p.roll) \
-                + self.makeTrace(p.trace) \
-                + "</Document></kml>"
+                + self.makeTrace(p.trace)
  
+            kml+= "</Document></kml>"
  #               + self.makeModel(p.longitude, p.latitude+0.003, p.altitude, p.heading, p.tilt, p.roll) \
             
             #print kml
@@ -120,7 +120,7 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 class GoogleEarthServer:
-    plane=Plane()
+    traces=dict()
     
     def run(self):
 
@@ -134,5 +134,7 @@ class GoogleEarthServer:
         print('http server is running...')
         start_new_thread(self.httpd.serve_forever, ())
 
-    def update(self,  **kwargs):
-        GoogleEarthServer.plane.update(**kwargs)
+    def update(self,  name,  **kwargs):
+        if not name in GoogleEarthServer.traces.keys():
+            GoogleEarthServer.traces[name]=Trace(name)
+        GoogleEarthServer.traces[name].update(**kwargs)

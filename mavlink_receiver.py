@@ -157,14 +157,14 @@ class MAVlinkReceiver:
                     pitch=getattr(msg, "pitch")
                     roll=getattr(msg, "roll")
                     yaw=getattr(msg, "yaw")
-                    self.earthserver.update(tilt=pitch,  roll=roll,  heading=yaw)
+                    self.earthserver.update(msg_key,  tilt=pitch,  roll=roll,  heading=yaw)
 
                 if msg.__class__.__name__=="MAVLink_global_position_int_message":
-                    self.earthserver.update(longitude=getattr(msg,  "lon")/10000000.0,  latitude=getattr(msg,  "lat")/10000000.0,  altitude=getattr(msg,  "alt")/1000.0)
+                    self.earthserver.update(msg_key,  longitude=getattr(msg,  "lon")/10000000.0,  latitude=getattr(msg,  "lat")/10000000.0,  altitude=getattr(msg,  "alt")/1000.0)
                     None;
                 if msg.__class__.__name__=="MAVLink_gps_raw_int_message":
                     if getattr(msg, "fix_type")>=2:
-                        self.earthserver.update(longitude=getattr(msg,  "lon")/10000000.0,  latitude=getattr(msg,  "lat")/10000000.0,  altitude=getattr(msg,  "alt")/1000.0)
+                        self.earthserver.update(msg_key, longitude=getattr(msg,  "lon")/10000000.0,  latitude=getattr(msg,  "lat")/10000000.0,  altitude=getattr(msg,  "alt")/1000.0)
 
             if msg.__class__.__name__.startswith("MAVLink_raw_data_stream"):
                 msg_key="%s:%s:%s"%(msg.get_srcSystem(),  msg.__class__.__name__, msg.stream_id)
