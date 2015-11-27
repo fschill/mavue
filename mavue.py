@@ -92,14 +92,14 @@ class Update_Thread():
                     #print "received message:", msg_key
                     #print "updating tree: ",msg_key
                     msgNode=self._treeViewInstance.rootNode.updateContent(key_attribute_list ,  content=msg)
-
-                    if msg_key.__contains__('MAVLink_heartbeat_message'):
-                        if self.timelinePlot is None:
-                            self.timelinePlot = MainWindow.addTimeline(self._parent)
-                            self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("base_mode"))
-                            self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("system_status"))
-                    #call plugins
-                    self.plugin_manager.run_plugins(msg)
+                    if msgNode!=None:
+                        if msg_key.__contains__('MAVLink_heartbeat_message'):
+                            if self.timelinePlot is None:
+                                self.timelinePlot = MainWindow.addTimeline(self._parent)
+                                self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("base_mode"))
+                                self.timelinePlot.widget.addSource(sourceY=msgNode.getValueByName("system_status"))
+                        #call plugins
+                        self.plugin_manager.run_plugins(msgNode)
             else:
                 break
 

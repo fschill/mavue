@@ -14,13 +14,13 @@ class Debugger(plugins.Plugin):
             self.load_elf_file(self.elf_filename)
                 
     def filter(self,  message):
-        return message.__class__.__name__.startswith("MAVLink_statustext_message")
+        return message.name.startswith("STATUSTEXT")
 
              
     def run(self,  message): 
         #print(self.severity[getattr(message,  "severity")]+"("+str(message._header.srcSystem)+":"+ str(message._header.srcComponent)+"): "+getattr(message,  "text")+"\n" )
         
-        text = getattr(message,  "text").split()
+        text = message.getValueByName("text").split()
         if (len(text)>1 and text[1].startswith("0x8")):
             address = int(text[1],  16)
             #funcname = self.decode_funcname(address)

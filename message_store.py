@@ -98,6 +98,7 @@ class RootNode(object):
                 else:
                     msgNode=MsgNode(name=child_name, parent=self, content=content, key_attribute=key_attribute_list[0])
             self._children[child_name].updateContent(content=content)
+            msgNode=self._children[child_name]
 
         else:
             if not (child_name in self._children.keys()):
@@ -238,6 +239,9 @@ class MsgNode(RootNode):
     def isMessage(self):
         return True
 
+    def getMavlinkKey(self):
+        return "(%i:%i) %s"%(self._content._header.srcSystem,  self._content._header.srcComponent,  self._name)
+
     def getValueByName(self, name):
         return self._children[name]
 
@@ -329,11 +333,11 @@ class ValueNode(RootNode):
             return self.counterTrace[self.findTraceIndex(range[0]):self.findTraceIndex(range[1])]
 
     def updateContent(self, content):
-        #if isinstance(content, list):
-        #     for i in range(0,len(content)):
-        #        if not(i in self._children.keys()):
-        #            ValueNode(name=i,   parent=self, content=content)
-        #        self._children[i].updateContent(content[i])
+        if isinstance(content, list):
+             for i in range(0,len(content)):
+                if not(i in self._children.keys()):
+                    ValueNode(name=i,   parent=self, content=content)
+                self._children[i].updateContent(content[i])
 
         # keep traces of scalar values
         #if isinstance(self._content, int) or isinstance(self._content, float):

@@ -11,10 +11,10 @@ Refer to the file LICENSE.TXT which should be included in all distributions of t
 #!/usr/bin/env python
  
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import os
 from thread import start_new_thread
-import time
 import math
+import plugins
+
 KmlHeader = """<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">"""
 
@@ -29,7 +29,7 @@ def radianToSymDegree(alpha):
     return alpha*180.0/math.pi
 
 class Trace:
-    def __init__(self, name="Track",  longitude=6.566044801857777,  latitude=46.51852236174565,  altitude=440,  heading=0.0,  tilt=0.0,  roll=0.0):
+    def __init__(self, name="Track",  longitude=6.566044801857777,  latitude=46.51852236174565,  altitude=440,  heading=0.0,  tilt=0.0,  roll=0.0,  data_range = [-1000, 0]):
         self.name=name
         self.heading=radianToPosDegree(heading)
         self.tilt=radianToPosDegree(90+tilt)
@@ -38,6 +38,8 @@ class Trace:
         self.longitude=longitude
         self.latitude=latitude
         self.trace=[]
+        self.source_msg_node=None
+        self.data_range=data_range
 
     def update(self,  longitude=None,  latitude=None,  altitude=None,  heading=None,  tilt=None,  roll=None):
         if heading!=None: self.heading=radianToPosDegree(heading)
@@ -48,12 +50,18 @@ class Trace:
         if latitude!=None: self.latitude=latitude
         if longitude!=None and latitude!=None:
             self.trace.append([self.longitude,  self.latitude,  self.altitude])
-
+            
+    def updateFromSource(self):
+        long_trace = self.source_msg_node.getValueByName("lon").getTrace(self.data_range)
+        lat_trace = self.source_msg_node.getValueByName("lat").getTrace(self.data_range)
+        alt_trace = self.source_msg_node.getValueByName("alt").getTrace(self.data_range)
+        self.trace = [[lon/1000000.0,  lat/1000000.0,  alt/1000.0] for lon, lat, alt in zip(long_trace,  lat_trace, alt_trace)]
+        
 #Create custom HTTPRequestHandler class
 class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
         
-    def makeView(self, longitude, latitude, altitude, heading, tilt, roll):
-       return "<Placemark> <name>3D View</name>\
+    def makeView(self, name,  longitude, latitude, altitude, heading, tilt, roll):
+       return "<Placemark> <name>%s</name>\
         <Camera> <longitude> %f</longitude> \
         <latitude>%f</latitude> \
         <altitude>%f</altitude> \
@@ -61,15 +69,15 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
         <tilt>%f</tilt> \
         <roll>%f</roll> \
         <altitudeMode>absolute</altitudeMode> \
-        </Camera></Placemark>" % (longitude, latitude, altitude, heading, tilt, roll)
+        </Camera></Placemark>" % (name, longitude, latitude, altitude, heading, tilt, roll)
 
-    def makeTrace(self, trace):
+    def makeTrace(self, name,  trace):
         coordinate_string =""
         for p in trace:
             coordinate_string+="%f,%f,%f "%(p[0],  p[1],  p[2])
         return\
     """<Placemark>
-<name>Trace</name>
+<name>%s</name>
 <styleUrl>#m_ylw-pushpin0</styleUrl>
 <LineString>
 <tessellate>1</tessellate>
@@ -77,17 +85,17 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
 %s 
 </coordinates>
 </LineString>
-</Placemark>"""% coordinate_string
+</Placemark>"""% (name,  coordinate_string)
 
-    def makeModel(self, longitude, latitude, altitude, heading, tilt, roll) :
+    def makeModel(self, name,  longitude, latitude, altitude, heading, tilt, roll) :
     	return \
-"""<Placemark><name>"Model"</name><styleUrl>#m_ylw-pushpin</styleUrl>
+"""<Placemark><name>"%s"</name><styleUrl>#m_ylw-pushpin</styleUrl>
 <Model id="model1"> 
 <Location><longitude> %f</longitude> <latitude>%f</latitude> <altitude>%f</altitude> </Location>
 <Orientation><heading>%f</heading> <tilt>%f</tilt> <roll>%f</roll> </Orientation>
 <altitudeMode>absolute</altitudeMode> 
 <Scale><x>1</x><y>1</y><z>1</z></Scale>
-</Model></Placemark>""" % (longitude, latitude, altitude, heading, tilt, roll)
+</Model></Placemark>""" % (name,  longitude, latitude, altitude, heading, tilt, roll)
 #<Link>
 #   <href>file:///Users/felix/Research/Projects/GIS/models/heli.dae</href>
 #</Link>    
@@ -103,11 +111,11 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
  
             #send file content to client
             kml=KmlHeader+"<Document> <name>Mavue Traces</name>"
-            for key, p in GoogleEarthServer.traces.items():
-                kml = kml \
-                + self.makeView(p.longitude, p.latitude, p.altitude, p.heading, p.tilt, p.roll) \
-                + self.makeModel(p.longitude, p.latitude+0.003, p.altitude, p.heading, p.tilt, p.roll) \
-                + self.makeTrace(p.trace)
+            for key, p in Google_Earth_Server.traces.items():
+                
+                #+ self.makeView(p.longitude, p.latitude, p.altitude, p.heading, p.tilt, p.roll) \
+                #+ self.makeModel(p.longitude, p.latitude+0.003, p.altitude, p.heading, p.tilt, p.roll) \
+                kml = kml + self.makeTrace(p.name, p.trace)
  
             kml+= "</Document></kml>"
  #               + self.makeModel(p.longitude, p.latitude+0.003, p.altitude, p.heading, p.tilt, p.roll) \
@@ -119,10 +127,11 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
             self.send_error(404, 'file not found')
 
 
-class GoogleEarthServer:
+class Google_Earth_Server(plugins.Plugin):
     traces=dict()
+    views=dict()
     
-    def run(self):
+    def __init__(self):
 
         print('http server is starting...')
      
@@ -134,7 +143,33 @@ class GoogleEarthServer:
         print('http server is running...')
         start_new_thread(self.httpd.serve_forever, ())
 
-    def update(self,  name,  **kwargs):
-        if not name in GoogleEarthServer.traces.keys():
-            GoogleEarthServer.traces[name]=Trace(name)
-        GoogleEarthServer.traces[name].update(**kwargs)
+    def run(self,  message):
+        if message.name()=="ATTITUDE":
+            pitch=message.getValueByName("pitch").content()
+            roll=message.getValueByName("roll").content()
+            yaw=message.getValueByName("yaw").content()
+            self.updateView(message.getMavlinkKey(),  tilt=pitch,  roll=roll,  heading=yaw)
+
+        if message.name()=="GLOBAL_POSITION_INT":
+            self.updateTrace(message.getMavlinkKey(),  longitude=message.getValueByName("lon").content()/10000000.0,  latitude=message.getValueByName( "lat").content()/10000000.0,  altitude=message.getValueByName( "alt").content()/1000.0)
+            self.updateView(message.getMavlinkKey(),  longitude=message.getValueByName( "lon").content()/10000000.0,  latitude=message.getValueByName( "lat").content()/10000000.0,  altitude=message.getValueByName( "alt").content()/1000.0)
+            None;
+        if message.name()=="GPS_RAW_INT":
+            if message.getValueByName("fix_type").content()>=2:
+                self.updateTrace(message.getMavlinkKey(), longitude=message.getValueByName( "lon").content()/10000000.0,  latitude=message.getValueByName( "lat").content()/10000000.0,  altitude=message.getValueByName( "alt").content()/1000.0)
+    
+    def filter(self, message):
+        return message.name()=="ATTITUDE" or message.name()=="GLOBAL_POSITION_INT" or  message.name()=="GPS_RAW_INT"
+        
+
+    def updateTrace(self,  name,  **kwargs):
+        if not name in self.traces.keys():
+            self.traces[name]=Trace(name)
+        self.traces[name].update(**kwargs)
+
+    def updateView(self,  name,  **kwargs):
+        if not name in self.views.keys():
+            self.views[name]=Trace(name)
+        self.views[name].update(**kwargs)
+
+
