@@ -8,6 +8,7 @@ Refer to the file LICENSE.TXT which should be included in all distributions of t
 '''
 
 import time
+import traceback
 
 KEY_SEPARATOR = ":"
 
@@ -192,6 +193,7 @@ class RootNode(object):
                 s()
             except:
                 print "subscriber error"
+                traceback.print_exc()
 
     def subscribe(self, subscriber):
         self._subscribers.add(subscriber)

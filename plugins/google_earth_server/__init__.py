@@ -29,7 +29,7 @@ def radianToSymDegree(alpha):
     return alpha*180.0/math.pi
 
 class Trace:
-    def __init__(self, name="Track",  longitude=6.566044801857777,  latitude=46.51852236174565,  altitude=440,  heading=0.0,  tilt=0.0,  roll=0.0,  data_range = [-1000, 0]):
+    def __init__(self, name="Track", msg_node=None,  longitude=6.566044801857777,  latitude=46.51852236174565,  altitude=440,  heading=0.0,  tilt=0.0,  roll=0.0,  data_range = [-1000, 0]):
         self.name=name
         self.heading=radianToPosDegree(heading)
         self.tilt=radianToPosDegree(90+tilt)
@@ -38,7 +38,7 @@ class Trace:
         self.longitude=longitude
         self.latitude=latitude
         self.trace=[]
-        self.source_msg_node=None
+        self.source_msg_node=msg_node
         self.data_range=data_range
 
     def update(self,  longitude=None,  latitude=None,  altitude=None,  heading=None,  tilt=None,  roll=None):
@@ -55,7 +55,8 @@ class Trace:
         long_trace = self.source_msg_node.getValueByName("lon").getTrace(self.data_range)
         lat_trace = self.source_msg_node.getValueByName("lat").getTrace(self.data_range)
         alt_trace = self.source_msg_node.getValueByName("alt").getTrace(self.data_range)
-        self.trace = [[lon/1000000.0,  lat/1000000.0,  alt/1000.0] for lon, lat, alt in zip(long_trace,  lat_trace, alt_trace)]
+        self.trace = [[lon/10000000.0,  lat/10000000.0,  alt/1000.0] for lon, lat, alt in zip(long_trace,  lat_trace, alt_trace)]
+        #print self.source_msg_node.getMavlinkKey(),  self.trace[-1]
         
 #Create custom HTTPRequestHandler class
 class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -76,9 +77,10 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
         for p in trace:
             coordinate_string+="%f,%f,%f "%(p[0],  p[1],  p[2])
         return\
-    """<Placemark>
+    """
+<Placemark>
 <name>%s</name>
-<styleUrl>#m_ylw-pushpin0</styleUrl>
+<styleUrl>red_line</styleUrl>
 <LineString>
 <tessellate>1</tessellate>
 <coordinates>
@@ -110,7 +112,7 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
  
             #send file content to client
-            kml=KmlHeader+"<Document> <name>Mavue Traces</name>"
+            kml=KmlHeader+"<Document> <name>Mavue Traces</name><Style id=\"red_line\"><LineStyle><color>ff0000ff</color><width>5</width></LineStyle></Style>"
             for key, p in Google_Earth_Server.traces.items():
                 
                 #+ self.makeView(p.longitude, p.latitude, p.altitude, p.heading, p.tilt, p.roll) \
@@ -131,8 +133,9 @@ class Google_Earth_Server(plugins.Plugin):
     traces=dict()
     views=dict()
     
-    def __init__(self):
+    def __init__(self,  data_range = [-1000, 0]):
 
+        self.data_range=data_range
         print('http server is starting...')
      
         #ip and port of servr
@@ -150,14 +153,14 @@ class Google_Earth_Server(plugins.Plugin):
             yaw=message.getValueByName("yaw").content()
             self.updateView(message.getMavlinkKey(),  tilt=pitch,  roll=roll,  heading=yaw)
 
-        if message.name()=="GLOBAL_POSITION_INT":
-            self.updateTrace(message.getMavlinkKey(),  longitude=message.getValueByName("lon").content()/10000000.0,  latitude=message.getValueByName( "lat").content()/10000000.0,  altitude=message.getValueByName( "alt").content()/1000.0)
-            self.updateView(message.getMavlinkKey(),  longitude=message.getValueByName( "lon").content()/10000000.0,  latitude=message.getValueByName( "lat").content()/10000000.0,  altitude=message.getValueByName( "alt").content()/1000.0)
-            None;
-        if message.name()=="GPS_RAW_INT":
-            if message.getValueByName("fix_type").content()>=2:
-                self.updateTrace(message.getMavlinkKey(), longitude=message.getValueByName( "lon").content()/10000000.0,  latitude=message.getValueByName( "lat").content()/10000000.0,  altitude=message.getValueByName( "alt").content()/1000.0)
-    
+        if message.name()=="GLOBAL_POSITION_INT" or message.name()=="GPS_RAW_INT":
+            #self.updateTrace(message.getMavlinkKey(),  longitude=message.getValueByName("lon").content()/10000000.0,  latitude=message.getValueByName( "lat").content()/10000000.0,  altitude=message.getValueByName( "alt").content()/1000.0)
+            #self.updateView(message.getMavlinkKey(),  longitude=message.getValueByName( "lon").content()/10000000.0,  latitude=message.getValueByName( "lat").content()/10000000.0,  altitude=message.getValueByName( "alt").content()/1000.0)
+            # add message node to traces dict
+            if not message.getMavlinkKey() in self.traces.keys():
+                self.traces[message.getMavlinkKey()]=Trace(name = message.getMavlinkKey(),  msg_node=message, data_range=self.data_range)
+                message.subscribe(self.traces[message.getMavlinkKey()].updateFromSource)
+                
     def filter(self, message):
         return message.name()=="ATTITUDE" or message.name()=="GLOBAL_POSITION_INT" or  message.name()=="GPS_RAW_INT"
         

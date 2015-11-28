@@ -68,9 +68,9 @@ class Update_Thread():
         self.t = QtCore.QTimer()
         self.t.timeout.connect(self.update)
         self.t.start(5)
-        self.plugin_manager=plugins.plugin_manager(self.plugin_callback)
-        self.timelinePlot = None
         self.mainDataRange=[-200, 0]
+        self.plugin_manager=plugins.plugin_manager(self.plugin_callback,  self.mainDataRange)
+        self.timelinePlot = None
         
     def plugin_callback(self,  msg):
         if msg!=None:

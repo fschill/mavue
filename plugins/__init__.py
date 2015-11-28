@@ -32,14 +32,15 @@ import google_earth_server
 
 class plugin_manager():
     
-    def __init__(self,  plugin_callback):
+    def __init__(self,  plugin_callback,  data_range=[-1000,  0]):
+        self.data_range=data_range
         parser =  argparse.ArgumentParser("[plugin_options]")
 
         parser.add_argument("--p_debug_elf", dest="p_debug_elf",  help="ELF file for debug information", default="")
         (opts, args) = parser.parse_known_args()
         
         self.active_plugins=[]#[distance_kalman_filter()]
-        self.active_plugins=[google_earth_server.Google_Earth_Server()]
+        self.active_plugins=[google_earth_server.Google_Earth_Server(data_range = self.data_range)]
         if opts.p_debug_elf!="":
             self.active_plugins.append(debugger.Debugger(elf_filename= opts.p_debug_elf))
         
