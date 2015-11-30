@@ -74,7 +74,12 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def makeTrace(self, name,  trace):
         coordinate_string =""
-        for p in trace:
+        strace=trace
+        if len(trace)>5000:
+            divider=int(len(trace)/5000)
+            strace=trace[0:-1:divider]
+            print len(trace),  len(strace)
+        for p in strace:
             coordinate_string+="%f,%f,%f "%(p[0],  p[1],  p[2])
         return\
     """
@@ -114,7 +119,7 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
             #send file content to client
             kml=KmlHeader+"<Document> <name>Mavue Traces</name><Style id=\"red_line\"><LineStyle><color>ff0000ff</color><width>5</width></LineStyle></Style>"
             for key, p in Google_Earth_Server.traces.items():
-                
+                p.updateFromSource()
                 #+ self.makeView(p.longitude, p.latitude, p.altitude, p.heading, p.tilt, p.roll) \
                 #+ self.makeModel(p.longitude, p.latitude+0.003, p.altitude, p.heading, p.tilt, p.roll) \
                 kml = kml + self.makeTrace(p.name, p.trace)
@@ -159,7 +164,7 @@ class Google_Earth_Server(plugins.Plugin):
             # add message node to traces dict
             if not message.getMavlinkKey() in self.traces.keys():
                 self.traces[message.getMavlinkKey()]=Trace(name = message.getMavlinkKey(),  msg_node=message, data_range=self.data_range)
-                message.subscribe(self.traces[message.getMavlinkKey()].updateFromSource)
+                #message.subscribe(self.traces[message.getMavlinkKey()].updateFromSource)
                 
     def filter(self, message):
         return message.name()=="ATTITUDE" or message.name()=="GLOBAL_POSITION_INT" or  message.name()=="GPS_RAW_INT"
