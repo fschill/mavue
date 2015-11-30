@@ -100,34 +100,33 @@ class DeviceActions(ItemWithParameters,  Plugin):
         
     # this method will be called for each MavBoot message
     def run(self,  message):
-        if message.__class__.__name__.startswith("MAVLink_bootloader_cmd_message"):
-            
+        if message.content().__class__.__name__.startswith("MAVLink_bootloader_cmd"):
             
             #remove ACK flag from command
-            base_command=message.command & 0x3f
+            base_command=message.content().command & 0x3f
             #print("Ack:", base_command,  message.param_address,  message.param_length)
             if base_command==mb.BOOT_INITIATE_SESSION:
-                print "Discovered device:" , message._header.srcSystem,  message._header.srcComponent
+                print "Discovered device:" , message.content()._header.srcSystem,  message.content()._header.srcComponent
                 self.getDeviceInfo()
                 
             if base_command in self.processorInfo.keys():
                 print ("updating processor info",  self.processorInfo[base_command].name)
-                self.processorInfo[base_command].updateValue(message.param_address)
+                self.processorInfo[base_command].updateValue(message.content().param_address)
                 if base_command in self.processorInfoLength.keys():
-                    self.processorInfoLength[base_command].updateValue(message.param_length)
+                    self.processorInfoLength[base_command].updateValue(message.content().param_length)
             if self.ack_msg_queue!=None:
                 #print "put in queue"
-                self.ack_msg_queue.put(message)
+                self.ack_msg_queue.put(message.content())
             #else:
             #    print "no message queue!!"
 
-        if message.__class__.__name__.startswith("MAVLink_bootloader_data_message"):
-            print(message.command,  message.base_address,  message.data_length,  message.data)
+        if message.content().__class__.__name__.startswith("MAVLink_bootloader_data"):
+            print(message.content().command,  message.content().base_address,  message.content().data_length,  message.content().data)
             #remove ACK flag from command
-            base_command=message.command & 0x3f
+            base_command=message.content().command & 0x3f
             if base_command in self.processorInfo.keys():
                 print ("updating processor info",  self.processorInfo[base_command].name)
-                self.processorInfo[base_command].updateValue(message.data[:message.data_length])
+                self.processorInfo[base_command].updateValue(message.content().data[:message.content().data_length])
 
 
     #def sendCommand(self):
@@ -428,13 +427,13 @@ class Bootloader(QtGui.QDialog,  Plugin):
     #overwrite inherited methods for Plugin:
     def filter(self,  message):
         # only respond to MavBoot messages
-        return message.__class__.__name__.startswith("MAVLink_bootloader")
+        return message.content().__class__.__name__.startswith("MAVLink_bootloader")
 
     # this method will be called for each MavBoot message
     def run(self,  message):
-        if message.__class__.__name__.startswith("MAVLink_bootloader"):
+        if message.content().__class__.__name__.startswith("MAVLink_bootloader"):
             #print(message.__class__.__name__)
-            deviceActions=self.deviceList.addItem(addExistingItems=False, mavlinkInterface=self.mavlinkReceiver,   sysid=message._header.srcSystem,  compid=message._header.srcComponent)
+            deviceActions=self.deviceList.addItem(addExistingItems=False, mavlinkInterface=self.mavlinkReceiver,   sysid=message.content()._header.srcSystem,  compid=message.content()._header.srcComponent)
             if deviceActions!=None:
                 deviceActions.run(message)
         

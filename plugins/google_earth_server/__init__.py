@@ -75,8 +75,8 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
     def makeTrace(self, name,  trace):
         coordinate_string =""
         strace=trace
-        if len(trace)>5000:
-            divider=int(len(trace)/5000)
+        if len(trace)>2000:
+            divider=int(len(trace)/2000)
             strace=trace[0:-1:divider]
             print len(trace),  len(strace)
         for p in strace:
