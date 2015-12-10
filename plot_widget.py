@@ -85,10 +85,10 @@ class DropTarget(QtGui.QWidget):
     def getData(self):
         if self.source==None:
             return []
-        if isinstance(self.source.content(), list):
-            return self.source.content()
-        else:
-            return self.source.getTrace(self.myParent.dataRange)
+        #if isinstance(self.source.content(), list):
+        #    return self.source.content()
+        #else:
+        return self.source.getTrace(self.myParent.dataRange)
 
     def getCurrent(self):
         if self.source==None:

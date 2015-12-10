@@ -322,11 +322,17 @@ class ValueNode(RootNode):
 
 
     def getTrace(self, range=[-100, 0]):
-
-        if range[1]==0:
-            return self.trace[self.findTraceIndex(range[0]):]
+        if isinstance(self._content, list):
+            if range[1]==0:
+                return self._content
+            else:
+                ti=self.findTraceIndex(range[1])
+                return self.trace[ti]
         else:
-            return self.trace[self.findTraceIndex(range[0]):self.findTraceIndex(range[1])]
+            if range[1]==0:
+                return self.trace[self.findTraceIndex(range[0]):]
+            else:
+                return self.trace[self.findTraceIndex(range[0]):self.findTraceIndex(range[1])]
 
     def getCounterTrace(self, range=[-100, 0]):
         if range[1]==0:
@@ -336,14 +342,15 @@ class ValueNode(RootNode):
 
     def updateContent(self, content):
         if isinstance(content, list):
-             for i in range(0,len(content)):
+            self.trace.append([x for x in content])
+            for i in range(0,len(content)):
                 if not(i in self._children.keys()):
                     ValueNode(name=i,   parent=self, content=content)
                 self._children[i].updateContent(content[i])
-
-        # keep traces of scalar values
-        #if isinstance(self._content, int) or isinstance(self._content, float):
-        self.trace.append(content)
+        else:
+            # keep traces of scalar values
+            #if isinstance(self._content, int) or isinstance(self._content, float):
+            self.trace.append(content)
         self.counterTrace.append(self.getMessageCounter())
         if len(self.trace) > self.max_trace_length:
             self.trace = self.trace[-self.max_trace_length:]
