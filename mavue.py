@@ -74,7 +74,7 @@ class Update_Thread():
         
     def plugin_callback(self,  msg):
         if msg!=None:
-            self._treeViewInstance.rootNode.updateContent(msg)
+            self._treeViewInstance.rootNode.updateContent(key_attribute_list, content=msg)
         
     def update(self):
         for i in range(0,100):

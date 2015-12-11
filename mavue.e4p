@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project mavue -->
-<!-- Saved: 2015-11-30, 20:17:07 -->
+<!-- Saved: 2015-12-11, 00:24:04 -->
 <!-- Copyright (C) 2015 ,  -->
 <Project version="5.1">
   <Language>en</Language>
@@ -39,6 +39,7 @@
     <Source>plugins/plugin_manager.py</Source>
     <Source>size_browser.py</Source>
     <Source>plugins/google_earth_server/__init__.py</Source>
+    <Source>plugins/gps_tool/__init__.py</Source>
   </Sources>
   <Forms/>
   <Translations/>

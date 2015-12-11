@@ -15,7 +15,6 @@ from  math import *
 import argparse
 
 
-
 class ReturnMessage(mavutil.mavlink.MAVLink_message):
     def __init__(self,  *kwargs):
         mavutil.mavlink.MAVLink_message.__init__(self,  *kwargs)
@@ -29,6 +28,7 @@ class Plugin:
             
 import debugger
 import google_earth_server
+import gps_tool
 
 class plugin_manager():
     
@@ -40,7 +40,9 @@ class plugin_manager():
         (opts, args) = parser.parse_known_args()
         
         self.active_plugins=[]#[distance_kalman_filter()]
-        self.active_plugins=[google_earth_server.Google_Earth_Server(data_range = self.data_range)]
+        self.active_plugins=[google_earth_server.Google_Earth_Server(data_range = self.data_range),  \
+                                        gps_tool.gps_tool(),  \
+                                        gps_tool.Named_Value_Scaler()]
         if opts.p_debug_elf!="":
             self.active_plugins.append(debugger.Debugger(elf_filename= opts.p_debug_elf))
         
