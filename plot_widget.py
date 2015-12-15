@@ -154,6 +154,11 @@ class Curve2DBox(QtGui.QWidget):
 
         if len(ydata)==0:
             ydata=[i for i in range(0, length)]
+
+        if len(xdata)!=len(ydata):
+            # try to get matching ydata for each point in xdata
+            xtrace = self.sources[0].source.getCounterTrace(self.dataRange)
+            ydata = [self.sources[1].source.trace[self.sources[1].source.findTraceIndex(xi)] for xi in xtrace]
             
         self.curve.setData(x=xdata,  y=ydata)
 

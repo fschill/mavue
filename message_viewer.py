@@ -174,3 +174,8 @@ class MessageTreeView:
     
     def close(self):
         self.rootNode.unsubscribeAllRecursive()
+
+    def clear(self):
+        self.rootNode.unsubscribeAllRecursive()
+        self.rootNode = RootNode(name="Mavlink",  key_attribute='Mavlink')
+        self.model._rootNode = self.rootNode

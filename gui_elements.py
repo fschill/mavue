@@ -50,6 +50,12 @@ class PlainComboField(QtGui.QComboBox):
         QtGui.QComboBox.showPopup(self)
          
     def updateChoices(self,  choices):
+        changed=False
+        for mc,nc in zip(self.choices,  choices):
+            if mc != nc:
+                changed=  True
+        if not changed:
+            return
         self.clear()
         
         self.choices = choices

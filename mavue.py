@@ -153,7 +153,7 @@ class MainWindow(QtGui.QMainWindow):
         self.widgetbarLayout=QtGui.QHBoxLayout()
         self.widgetbar.setLayout(self.widgetbarLayout)
         
-        self.serialSelect=gui_elements.PlainComboField(parent=self,  label='Serial port',  choices=['udp:localhost:14550']+[s.device for s in self.serialPorts],  value=self.updater.mavlinkReceiver.opts.device,  onOpenCallback = self.rescanForSerials)
+        self.serialSelect=gui_elements.PlainComboField(parent=self,  label='Serial port',  choices=['...','udp:localhost:14550']+[s.device for s in self.serialPorts],  value=self.updater.mavlinkReceiver.opts.device,  onOpenCallback = self.rescanForSerials)
         self.connect(self.serialSelect,  QtCore.SIGNAL("currentIndexChanged(const QString&)"),  self.openConnection)
 
         
@@ -203,7 +203,7 @@ class MainWindow(QtGui.QMainWindow):
     def rescanForSerials(self):
         self.serialPorts= self.updater.mavlinkReceiver.scanForSerials()
         print self.serialPorts
-        self.serialSelect.updateChoices(['udp:localhost:14550']+[s.device for s in self.serialPorts]) 
+        self.serialSelect.updateChoices(['...','udp:localhost:14550']+[s.device for s in self.serialPorts]) 
 
         
     def addPlot(self):
@@ -235,6 +235,13 @@ class MainWindow(QtGui.QMainWindow):
         self.bootloaderWindow.show()
 
     def openConnection(self,  index):
+        if index=="...":
+            filename=QtGui.QFileDialog.getOpenFileName(self, 'Open file', '',  "*.raw")
+            if filename!=None:
+                index=filename
+            else:
+                return
+
         try:
             self.updater.stop
             print "closed previous connection"
