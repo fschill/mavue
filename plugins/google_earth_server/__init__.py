@@ -29,7 +29,7 @@ def radianToSymDegree(alpha):
     return alpha*180.0/math.pi
 
 class Trace:
-    def __init__(self, name="Track", msg_node=None,  longitude=6.566044801857777,  latitude=46.51852236174565,  altitude=440,  heading=0.0,  tilt=0.0,  roll=0.0,  data_range = [-1000, 0]):
+    def __init__(self, name="Track", msg_node=None,  longitude=6.566044801857777,  latitude=46.51852236174565,  altitude=440,  heading=0.0,  tilt=0.0,  roll=0.0,  data_range = [-1000, 0],  color="red_line"):
         self.name=name
         self.heading=radianToPosDegree(heading)
         self.tilt=radianToPosDegree(90+tilt)
@@ -38,6 +38,7 @@ class Trace:
         self.longitude=longitude
         self.latitude=latitude
         self.trace=[]
+        self.color=color
         self.source_msg_node=msg_node
         self.data_range=data_range
 
@@ -72,7 +73,7 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
         <altitudeMode>absolute</altitudeMode> \
         </Camera></Placemark>" % (name, longitude, latitude, altitude, heading, tilt, roll)
 
-    def makeTrace(self, name,  trace):
+    def makeTrace(self, name,  color,  trace):
         coordinate_string =""
         strace=trace
         if len(trace)>2000:
@@ -85,14 +86,14 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
     """
 <Placemark>
 <name>%s</name>
-<styleUrl>red_line</styleUrl>
+<styleUrl>#%s</styleUrl>
 <LineString>
 <tessellate>1</tessellate>
 <coordinates>
 %s 
 </coordinates>
 </LineString>
-</Placemark>"""% (name,  coordinate_string)
+</Placemark>"""% (name, color,   coordinate_string)
 
     def makeModel(self, name,  longitude, latitude, altitude, heading, tilt, roll) :
     	return \
@@ -117,12 +118,14 @@ class KmlHTTPRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
  
             #send file content to client
-            kml=KmlHeader+"<Document> <name>Mavue Traces</name><Style id=\"red_line\"><LineStyle><color>ff0000ff</color><width>5</width></LineStyle></Style>"
+            kml=KmlHeader+"<Document> <name>Mavue Traces</name>\
+            <Style id=\"red_line\"> <LineStyle><color>ff0000ff</color><width>4</width></LineStyle></Style>\
+            <Style id=\"blue_line\"><LineStyle><color>ff00ffff</color><width>4</width></LineStyle></Style>"
             for key, p in Google_Earth_Server.traces.items():
                 p.updateFromSource()
                 #+ self.makeView(p.longitude, p.latitude, p.altitude, p.heading, p.tilt, p.roll) \
                 #+ self.makeModel(p.longitude, p.latitude+0.003, p.altitude, p.heading, p.tilt, p.roll) \
-                kml = kml + self.makeTrace(p.name, p.trace)
+                kml = kml + self.makeTrace(p.name, p.color,   p.trace)
  
             kml+= "</Document></kml>"
  #               + self.makeModel(p.longitude, p.latitude+0.003, p.altitude, p.heading, p.tilt, p.roll) \
@@ -162,8 +165,11 @@ class Google_Earth_Server(plugins.Plugin):
             #self.updateTrace(message.getMavlinkKey(),  longitude=message.getValueByName("lon").content()/10000000.0,  latitude=message.getValueByName( "lat").content()/10000000.0,  altitude=message.getValueByName( "alt").content()/1000.0)
             #self.updateView(message.getMavlinkKey(),  longitude=message.getValueByName( "lon").content()/10000000.0,  latitude=message.getValueByName( "lat").content()/10000000.0,  altitude=message.getValueByName( "alt").content()/1000.0)
             # add message node to traces dict
+            col = "blue_line"
+            if message.name()=="GLOBAL_POSITION_INT":
+                col = "red_line"
             if not message.getMavlinkKey() in self.traces.keys():
-                self.traces[message.getMavlinkKey()]=Trace(name = message.getMavlinkKey(),  msg_node=message, data_range=self.data_range)
+                self.traces[message.getMavlinkKey()]=Trace(name = message.getMavlinkKey(),  msg_node=message, data_range=self.data_range,  color =col)
                 #message.subscribe(self.traces[message.getMavlinkKey()].updateFromSource)
                 
     def filter(self, message):

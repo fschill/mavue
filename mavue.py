@@ -77,7 +77,7 @@ class Update_Thread():
             self._treeViewInstance.rootNode.updateContent(key_attribute_list, content=msg)
         
     def update(self):
-        for i in range(0,100):
+        for i in range(0,200):
             if self.mavlinkReceiver.messagesAvailable():
                 msg_key=""
                 if self.mavlinkReceiver.threading:
