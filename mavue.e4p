@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project mavue -->
-<!-- Saved: 2015-12-11, 00:24:04 -->
-<!-- Copyright (C) 2015 ,  -->
+<!-- Saved: 2016-02-02, 10:59:44 -->
+<!-- Copyright (C) 2016 ,  -->
 <Project version="5.1">
   <Language>en</Language>
   <Hash>aa7f02df4c7956ed153713f84124b6bcda3aacc2</Hash>
@@ -40,6 +40,7 @@
     <Source>size_browser.py</Source>
     <Source>plugins/google_earth_server/__init__.py</Source>
     <Source>plugins/gps_tool/__init__.py</Source>
+    <Source>plugins/robotvis/__init__.py</Source>
   </Sources>
   <Forms/>
   <Translations/>
