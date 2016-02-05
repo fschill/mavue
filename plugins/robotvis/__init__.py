@@ -21,10 +21,16 @@ class robotvis(plugins.Plugin):
         self.data_range=data_range
         print "loading CAD model"
         serafina=solid.Solid()
-        serafina.load("Serafina.stl")
-        serafina.rotate_z()
+        serafina.load("Vertex_visible_simplest.stl")
+        #serafina.rotate_z()
+        #serafina.rotate_z()
+        #serafina.rotate_z()
         w = gl.GLViewWidget()
         w.opts['distance'] = 200
+        
+        axes=gl.GLAxisItem()
+        axes.setSize(x=2000,  y=1000,  z=100)
+        w.addItem(axes)
         w.show()
         w.setWindowTitle('Robot Visualiser')
         self.gl_item = showFacets(solid=serafina,  widget=w,  glOptions="opaque",  translate=[0,0,0])
@@ -45,5 +51,5 @@ class robotvis(plugins.Plugin):
             yaw=message.getValueByName("yaw").content()
             self.gl_item.resetTransform()
             self.gl_item.rotate(roll*180/PI, 1,0,0)
-            self.gl_item.rotate(pitch*180/PI, 0,1,0)
-            self.gl_item.rotate(yaw*180/PI, 0,0,1)
+            self.gl_item.rotate(pitch*180/PI, 0,-1,0)
+            self.gl_item.rotate(yaw*180/PI, 0,0,-1)
