@@ -46,6 +46,8 @@ import time
 import plugins as plugins
 import gui_elements
 
+import plugins.robotvis
+
 colors=[[1.0, 0.0, 0.0],  [0.0,  1.0,  0.0],  [0.0,  0.0,  1.0],  [1.0, 1.0, 0.0],  [0.0,  1.0,  1.0],  [1.0,  0.0,  1.0]]
         
 
@@ -182,10 +184,14 @@ class MainWindow(QtGui.QMainWindow):
         self.l.addWidget(self.messageTreeView.treeView,  1,  0)  
         self.l.addWidget(self.widgetbar)
         
-        self.addButton=QtGui.QPushButton("new plot")
-        self.connect(self.addButton,  QtCore.SIGNAL("clicked()"),  self.addPlot)
+        self.add2DButton=QtGui.QPushButton("2D plot")
+        self.connect(self.add2DButton,  QtCore.SIGNAL("clicked()"),  self.addPlot)
+
+        self.add3DButton=QtGui.QPushButton("3D plot")
+        self.connect(self.add3DButton,  QtCore.SIGNAL("clicked()"),  self.addPlot6D)
         
-        self.widgetbarLayout.addWidget(self.addButton)
+        self.widgetbarLayout.addWidget(self.add2DButton)
+        self.widgetbarLayout.addWidget(self.add3DButton)
 
         self.addParamButton=QtGui.QPushButton("param-slider")
         self.connect(self.addParamButton,  QtCore.SIGNAL("clicked()"),  self.addParamSlider)        
@@ -207,12 +213,21 @@ class MainWindow(QtGui.QMainWindow):
 
         
     def addPlot(self):
-        pw1 = DropPlot(parent=self, dataRange=self.updater.mainDataRange)
+        pw1 = DropPlot(parent=self, data_range=self.updater.mainDataRange)
         #self.l.addWidget(pw1,  0,  1)
-        dock1=DockPlot(title="plot",  parent=self,  widget=pw1)
+        dock1=DockPlot(title="2D Plot",  parent=self,  widget=pw1)
         #self.addDockWidget(QtCore.Qt.NoDockWidgetArea,  dock1)
         dock1.show()
         return dock1
+
+    def addPlot6D(self):
+        pw1 = plugins.robotvis.DropPlot6D(parent=self, data_range=self.updater.mainDataRange)
+        #self.l.addWidget(pw1,  0,  1)
+        dock1=DockPlot(title="3D Plot",  parent=self,  widget=pw1)
+        #self.addDockWidget(QtCore.Qt.NoDockWidgetArea,  dock1)
+        dock1.show()
+        return dock1
+
 
     def addTimeline(self):
         pw1 = TimeLinePlot(parent=self, dataRange=self.updater.mainDataRange)
@@ -224,7 +239,7 @@ class MainWindow(QtGui.QMainWindow):
     def addParamSlider(self):
         
         #self.l.addWidget(pw1,  0,  1)
-        slider=ParamSlider(title="slider",  parent=self)
+        slider=ParamSlider(title="Slider",  parent=self)
         slider.show()
 
     def openBootloader(self):

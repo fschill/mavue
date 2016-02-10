@@ -87,9 +87,9 @@ class TreeModel(QtCore.QAbstractItemModel):
         if not index.isValid(): return QtCore.Qt.NoItemFlags
         if self.isMavlinkMessage(index):
             if  index.column()==0:
-                return QtCore.Qt.ItemIsEnabled  | QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsUserCheckable
+                return QtCore.Qt.ItemIsEnabled  | QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsUserCheckable |  QtCore.Qt.ItemIsDragEnabled 
             elif index.column()==1: # frequency display
-                return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsUserCheckable |QtCore.Qt.ItemIsEditable
+                return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEditable
             else:
                 return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsDragEnabled 
         else:

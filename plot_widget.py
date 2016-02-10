@@ -14,86 +14,7 @@ import numpy as np
 import pyqtgraph as pg
 
 import gui_elements 
-
-
-class DropTarget(QtGui.QWidget):
-    def __init__(self,text, parent, color=QtGui.QColor(0, 0, 0)):
-        QtGui.QWidget.__init__( self, parent=parent)
-        self.myParent=parent
-        self.originalName=text
-        self.currentName=self.originalName
-        self.color=color
-        self.label=QtGui.QLabel(text, self)
-        self.removeButton=QtGui.QPushButton("-")
-        #self.removeButton.setAutoFillBackground(True)
-        #self.removeButton.setStyleSheet("background-color: rgba(%i, %i, %i, %i); "%(color.red(),  color.green(),  color.blue(),  255))
-
-        self.removeButton.setFixedSize(15, 15)
-        self.connect(self.removeButton,  QtCore.SIGNAL("clicked()"),  self.remove)
-        self.layout = QtGui.QHBoxLayout()
-        self.setLayout(self.layout)
-        self.layout.setMargin(0)
-
-        self.layout.addWidget(self.label)
-        self.layout.addWidget(self.removeButton)
-        self.layout.addStretch()
-        self.setAcceptDrops(True)
-        self.source=None
-        self.curve=None
-
-    def dragEnterEvent(self, event):
-        print "drag_enter"
-        if event.mimeData().hasFormat('application/x-mavplot'):
-            print event.mimeData().text()
-            print event.source().model()._rootNode.retrieveByKey(str(event.mimeData().text()).split(':')).getKey()
-            event.accept()
-        else:
-            event.ignore() 
-
-    def remove(self):
-        try:
-            self.source.unsubscribe(self.myParent.updateValue)
-        except:
-            print "remove", self.currentName, "  not subscribed"
-
-        self.myParent.removeTarget(self)
-        self.source=None
-       
-        self.label.setText(self.originalName)
-        self.currentName=self.originalName
-    
-    def updateSource(self,  source):
-        try:
-            self.source.unsubscribe(self.myParent.updateValue)
-        except:
-            print "not subscribed"
-        self.source=source
-        self.source.subscribe(self.myParent.updateValue)
-        self.myParent.updateValue()
-                
-        self.label.setAutoFillBackground(True)
-        self.label.setStyleSheet("background-color: rgba(%i, %i, %i, %i); "%(self.color.red(),  self.color.green(),  self.color.blue(),  255))
-        self.label.setText(source.displayName())
-        self.currentName=source.displayName()
-                     
-    def dropEvent(self, event):
-        #self.updateSource( event.source().model().lastDraggedNode)
-        self.updateSource( event.source().model()._rootNode.retrieveByKey(str(event.mimeData().text()).split(':')))
-        self.source.subscribe(self.myParent.updateValue)
-        self.myParent.updateValue()
-        
-    def getData(self):
-        if self.source==None:
-            return []
-        #if isinstance(self.source.content(), list):
-        #    return self.source.content()
-        #else:
-        return self.source.getTrace(self.myParent.dataRange)
-
-    def getCurrent(self):
-        if self.source==None:
-            return []
-        return self.source.content()
+from droptarget import *
 
 class Curve2DBox(QtGui.QWidget):
     def __init__(self,text, parent, dataRange=[-100, 0],  color=QtGui.QColor(0, 0, 0)):
@@ -190,7 +111,7 @@ class Curve2DBox(QtGui.QWidget):
     
 class DropPlot(QtGui.QWidget):
     dropped = QtCore.pyqtSignal(list)
-    def __init__(self, parent=None, dataRange=[-100,0]):
+    def __init__(self, parent=None, data_range=[-100,0]):
         QtGui.QWidget.__init__( self, parent=parent)
         self.setContentsMargins(0, 0, 0, 0)
 
@@ -213,7 +134,7 @@ class DropPlot(QtGui.QWidget):
         self.targets_area.setHidden(True)
         self.targets=[]
         self.layout.addWidget(self.targets_area)
-        self.dataRange=dataRange
+        self.dataRange=data_range
         #sourceTarget=Curve2DBox("data", self,  color=pg.intColor(len(self.targets)))
         #self.targets.append(sourceTarget)
         #self.targets_layout.addWidget(sourceTarget)
@@ -257,10 +178,28 @@ class DropPlot(QtGui.QWidget):
 
     def dropEvent(self, event):
         #self.updatePlot()
-        self.addSource(sourceY=event.source().model().lastDraggedNode)
-        print "dropped on plot!"
+        new_source =  event.source().model()._rootNode.retrieveByKey(str(event.mimeData().text()).split(':'))
+        if new_source.__class__.__name__=="ValueNode":
+            self.addSource(sourceY=new_source)
+            print "dropped on plot!"
+        elif new_source.__class__.__name__=="MsgNode":
+            #add all values of the message
+            # look for time_boot_ms:
+            timestamp = new_source.getValueByName("time_boot_ms")
+            for val in new_source.getChildrenNames():
+                val_node=new_source.getValueByName(val)
+                print val_node.name()
+                if val_node.name()!="time_boot_ms":
+                    self.addSource(sourceY=val_node,  sourceX = timestamp)
+        else: 
+            print "This plot doesn't accept this type:",   new_source.__class__.__name__
 
     def addSource(self, sourceX=None, sourceY=None):
+        if (sourceX is not None and not (isinstance(sourceX.content(),  int) or isinstance(sourceX.content(),  float))) or \
+        (sourceY is not None and not (isinstance(sourceY.content(),  int) or isinstance(sourceY.content(),  float))):
+            print "cannot add this type as source"
+            return
+
         sourceTarget=Curve2DBox("data", self, dataRange=self.dataRange, color=pg.intColor(len(self.targets)))
         if sourceX is not None:
             sourceTarget.sources[0].updateSource(sourceX)
@@ -268,6 +207,8 @@ class DropPlot(QtGui.QWidget):
             sourceTarget.sources[1].updateSource(sourceY)
         self.targets.append(sourceTarget)
         self.targets_layout.addWidget(sourceTarget)
+        self.rebuildLegend()
+
         
     def enterEvent(self,  event):
         self.targets_area.setHidden(False)
@@ -290,9 +231,9 @@ class DropPlot(QtGui.QWidget):
 
 class TimeLinePlot(DropPlot):
     def __init__(self, parent=None, dataRange=[0,0]):
-        DropPlot.__init__( self, parent=parent, dataRange=dataRange)
+        DropPlot.__init__( self, parent=parent, data_range=dataRange)
 
-        self.lr = pg.LinearRegionItem([0,100])
+        self.lr = pg.LinearRegionItem([0, 1000])
         self.plotwidget.addItem(self.lr)
         self.lr.sigRegionChanged.connect(self.regionChanged)
         self.plotwidget.sigXRangeChanged.connect(self.plotChanged)
@@ -300,13 +241,19 @@ class TimeLinePlot(DropPlot):
         self.internalModificationFlag = False
 
     def addSource(self, sourceX=None, sourceY=None):
+        if (sourceX is not None and not (isinstance(sourceX.content(),  int) or isinstance(sourceX.content(),  float))) or \
+        (sourceY is not None and not (isinstance(sourceY.content(),  int) or isinstance(sourceY.content(),  float))):
+            print "cannot add this type as source"
+            return
+
         sourceTarget=Curve2DBox("data", self, dataRange=[0,0], color=pg.intColor(len(self.targets)))
-        if sourceX is not None:
-            sourceTarget.sources[0].updateSource(sourceX)
+        #if sourceX is not None:
+        #    sourceTarget.sources[0].updateSource(sourceX)
         if sourceY is not None:
             sourceTarget.sources[1].updateSource(sourceY)
         self.targets.append(sourceTarget)
         self.targets_layout.addWidget(sourceTarget)
+        self.rebuildLegend()
 
     def regionChanged(self):
         if self.internalModificationFlag:
@@ -351,6 +298,7 @@ class TimeLinePlot(DropPlot):
         self.dataRange[0]=-200
         self.dataRange[1]=0
         
+
 
 class DockPlot(QtGui.QDialog):
     def __init__(self,  title="Plot",  parent=None,  widget=None):

@@ -43,6 +43,9 @@ class RootNode(object):
 
     def addChild(self, child):
         self._children[child.name()] = child
+    
+    def getChildrenNames(self):
+        return self._children.keys()
 
     def getMessageCounter(self):  # get message counter of root node
         if self._parent is not None:
@@ -245,7 +248,10 @@ class MsgNode(RootNode):
         return "(%i:%i) %s"%(self._content._header.srcSystem,  self._content._header.srcComponent,  self._name)
 
     def getValueByName(self, name):
-        return self._children[name]
+        if name in self._children.keys():
+            return self._children[name]
+        else:
+            return None
 
     def displayContent(self):
         if self.last_update != None and (time.time() - self.last_update) > min(1.5, 2.0 * self.update_period + 0.3):
@@ -309,7 +315,10 @@ class ValueNode(RootNode):
 
     def findTraceIndex(self, counterValue):
         if counterValue < 0:
-            return counterValue
+            if -counterValue >= len(self.counterTrace):
+                return 0
+            else:
+                return int(counterValue)
         start = 0
         end = len(self.counterTrace)
         while end-start>1:
@@ -330,9 +339,9 @@ class ValueNode(RootNode):
                 return self.trace[ti]
         else:
             if range[1]==0:
-                return self.trace[self.findTraceIndex(range[0]):]
+                return self.trace[max(0, self.findTraceIndex(range[0])):]
             else:
-                return self.trace[self.findTraceIndex(range[0]):self.findTraceIndex(range[1])]
+                return self.trace[max(0, self.findTraceIndex(range[0])):self.findTraceIndex(range[1])]
 
     def getCounterTrace(self, range=[-100, 0]):
         if range[1]==0:
