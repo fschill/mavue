@@ -12,9 +12,10 @@ Refer to the file LICENSE.TXT which should be included in all distributions of t
 from pyqtgraph.Qt import QtGui, QtCore
 
 class DropTarget(QtGui.QWidget):
-    def __init__(self,text, parent, color=QtGui.QColor(0, 0, 0)):
+    def __init__(self,text, parent, color=QtGui.QColor(0, 0, 0),  class_filter=None):
         QtGui.QWidget.__init__( self, parent=parent)
         self.myParent=parent
+        self.class_filter=class_filter
         self.originalName=text
         self.currentName=self.originalName
         self.color=color
@@ -43,6 +44,7 @@ class DropTarget(QtGui.QWidget):
             print event.source().model()._rootNode.retrieveByKey(str(event.mimeData().text()).split(':')).getKey()
             event.accept()
         else:
+            #print "droptarget enter"
             event.ignore() 
 
     def remove(self):
@@ -75,11 +77,11 @@ class DropTarget(QtGui.QWidget):
         #self.updateSource( event.source().model().lastDraggedNode)
         new_source =  event.source().model()._rootNode.retrieveByKey(str(event.mimeData().text()).split(':'))
         print new_source.__class__.__name__
-        if new_source.__class__.__name__=="ValueNode":
+        if self.class_filter is not None and new_source.__class__.__name__==self.class_filter:
             self.updateSource(new_source)
             self.source.subscribe(self.myParent.updateValue)
             self.myParent.updateValue()
-        
+    
     def getData(self):
         if self.source==None:
             return []

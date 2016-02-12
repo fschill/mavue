@@ -22,7 +22,7 @@ class Curve2DBox(QtGui.QWidget):
         self.myParent=parent
         self.color=color
 
-        self.sources=[DropTarget("x", self,  color=self.color),  DropTarget("y", self,  color=self.color)]
+        self.sources=[DropTarget("x", self,  color=self.color,  class_filter="ValueNode"),  DropTarget("y", self,  color=self.color,  class_filter="ValueNode")]
         self.curveTypeCombo=gui_elements.PlainComboField(parent=self,  label="curve",  value="Line",  choices=["Line",  "Scatter"])
         self.curveType="Line"
         self.connect(self.curveTypeCombo.combo,  QtCore.SIGNAL("currentIndexChanged(QString)"),  self.updateCurveType)
@@ -71,14 +71,16 @@ class Curve2DBox(QtGui.QWidget):
             #xdata=[i for i in range(0, length)]
             xdata = self.sources[1].source.getCounterTrace(self.dataRange)
             if len(xdata)!=len(ydata):
-                xdata=[i for i in range(0, length)]
+                xdata=[i for i in range(0, len(ydata))]
 
         if len(ydata)==0:
             ydata=[i for i in range(0, length)]
 
         if len(xdata)!=len(ydata):
             # try to get matching ydata for each point in xdata
+            print "size mismatch: x: %i, y%i"%(len(xdata),  len(ydata))
             xtrace = self.sources[0].source.getCounterTrace(self.dataRange)
+            xdata = [self.sources[0].source.trace[self.sources[0].source.findTraceIndex(xi)] for xi in xtrace]
             ydata = [self.sources[1].source.trace[self.sources[1].source.findTraceIndex(xi)] for xi in xtrace]
             
         self.curve.setData(x=xdata,  y=ydata)
@@ -138,7 +140,6 @@ class DropPlot(QtGui.QWidget):
         #sourceTarget=Curve2DBox("data", self,  color=pg.intColor(len(self.targets)))
         #self.targets.append(sourceTarget)
         #self.targets_layout.addWidget(sourceTarget)
-
     
     def sizeHint(self):
         return QtCore.QSize(500, 500)
@@ -148,7 +149,6 @@ class DropPlot(QtGui.QWidget):
         self.targets_layout.removeWidget(target)
         target.deleteLater()
         self.targets.remove(target)
-    
 
     def rebuildLegend(self):
         for t in self.targets:
@@ -158,7 +158,6 @@ class DropPlot(QtGui.QWidget):
             print "adding ",  t.sources[1].currentName
             self.plotwidget.plotItem.legend.addItem(t.curve,  t.sources[1].currentName)
         #self.myParent.plotwidget.plotItem.legend.updateSize()
-        
         
     def updateSource(self, source):
       self.source=source
@@ -274,7 +273,8 @@ class TimeLinePlot(DropPlot):
             self.lr.setRegion(region)
             self.dataRange[0]=region[0]
             self.dataRange[1]=region[1]
-            self.targets[0].sources[1].source.getRootNode().notifyAllSubscribers()
+            if not self.tracking:
+                self.targets[0].sources[1].source.getRootNode().notifyAllSubscribers()
         except:
             pass
 

@@ -240,7 +240,8 @@ class MsgNode(RootNode):
             else:
                 self.update_period = 0.7 * self.update_period + 0.3 * (update_time - self.last_update)
         self.last_update = update_time
-
+        self.notifySubscribers()
+        
     def isMessage(self):
         return True
 
@@ -329,7 +330,6 @@ class ValueNode(RootNode):
                 start = middle
         return start
 
-
     def getTrace(self, range=[-100, 0]):
         if isinstance(self._content, list):
             if range[1]==0:
@@ -373,3 +373,12 @@ class ValueNode(RootNode):
         if isinstance(self._content, str) or isinstance(self._content, int) or isinstance(self._content, float):
             return str(self._content)
         return "?"
+        
+    # pass subscribers upwards to message node, as values generally only update as a whole message
+    # (no need to notify individually for each value - it could lead to multiple updates)
+    def subscribe(self, subscriber):
+        self._parent.subscribe(subscriber)
+
+    def unsubscribe(self, subscriber):
+        self._parent.unsubscribe(subscriber)
+
