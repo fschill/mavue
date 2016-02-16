@@ -110,10 +110,11 @@ class DeviceActions(ItemWithParameters,  Plugin):
                 self.getDeviceInfo()
                 
             if base_command in self.processorInfo.keys():
-                print ("updating processor info",  self.processorInfo[base_command].name)
                 self.processorInfo[base_command].updateValue(message.content().param_address)
+                print ("updating processor info",  self.processorInfo[base_command].name,  "%0X"%(self.processorInfo[base_command].value))
                 if base_command in self.processorInfoLength.keys():
                     self.processorInfoLength[base_command].updateValue(message.content().param_length)
+                    print ("updating processor info",  self.processorInfoLength[base_command].name,  "%i"%(self.processorInfoLength[base_command].value))
             if self.ack_msg_queue!=None:
                 #print "put in queue"
                 self.ack_msg_queue.put(message.content())

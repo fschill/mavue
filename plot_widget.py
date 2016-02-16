@@ -295,7 +295,7 @@ class TimeLinePlot(DropPlot):
 
     def closeEvent(self,  event):
         DropPlot.closeEvent(self,  event)
-        self.dataRange[0]=-200
+        self.dataRange[0]=-100
         self.dataRange[1]=0
         
 
