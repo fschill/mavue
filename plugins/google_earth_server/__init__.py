@@ -145,15 +145,17 @@ class Google_Earth_Server(plugins.Plugin):
 
         self.data_range=data_range
         print('http server is starting...')
-     
-        #ip and port of servr
-        #by default http server port is 80
-        server_address = ('127.0.0.1', 8000)
-        self.httpd = HTTPServer(server_address, KmlHTTPRequestHandler)
-       
-        print('http server is running...')
-        start_new_thread(self.httpd.serve_forever, ())
-
+        try:
+            #ip and port of servr
+            #by default http server port is 80
+            server_address = ('127.0.0.1', 8000)
+            self.httpd = HTTPServer(server_address, KmlHTTPRequestHandler)
+           
+            print('http server is running...')
+            start_new_thread(self.httpd.serve_forever, ())
+        except:
+            print "Cannot start Google Earth server plugin (Socket error)."
+            
     def run(self,  message):
         if message.name()=="ATTITUDE":
             pitch=message.getValueByName("pitch").content()
