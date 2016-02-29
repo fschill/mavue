@@ -339,7 +339,7 @@ class ValueNode(RootNode):
                 return self.trace[ti]
         else:
             if range[1]==0:
-                return self.trace[max(0, self.findTraceIndex(range[0])):]
+                return self.trace[self.findTraceIndex(range[0]):]
             else:
                 return self.trace[max(0, self.findTraceIndex(range[0])):self.findTraceIndex(range[1])]
 

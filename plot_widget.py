@@ -194,9 +194,9 @@ class DropPlot(QtGui.QWidget):
             print "This plot doesn't accept this type:",   new_source.__class__.__name__
 
     def addSource(self, sourceX=None, sourceY=None):
-        if (sourceX is not None and not (isinstance(sourceX.content(),  int) or isinstance(sourceX.content(),  float))) or \
-        (sourceY is not None and not (isinstance(sourceY.content(),  int) or isinstance(sourceY.content(),  float))):
-            print "cannot add this type as source"
+        if (sourceX is not None and not (isinstance(sourceX.content(),  int) or isinstance(sourceX.content(),  float) or  isinstance(sourceY.content(),  list) )) or \
+        (sourceY is not None and not (isinstance(sourceY.content(),  int) or isinstance(sourceY.content(),  float) or isinstance(sourceY.content(),  list))):
+            print "cannot add this type as source:",  sourceX,  isinstance(sourceY.content(),  list)
             return
 
         sourceTarget=Curve2DBox("data", self, dataRange=self.dataRange, color=pg.intColor(len(self.targets)))

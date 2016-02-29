@@ -8,6 +8,7 @@ import sys, time, os
 #from curses import ascii
 from multiprocessing import   Queue
 from threading import Thread
+import traceback
 
 from Queue import Empty
 
@@ -54,12 +55,8 @@ class MAVlinkReceiver:
 
         self.master=None
         # create a mavlink serial instance
-        print ""
-        print "Initialising as system ",   opts.SOURCE_SYSTEM,  "on device",  opts.device,  "(baud=",  opts.baudrate,  ")"
-        print "with MAVlink dialect '",  opts.dialect, "'"
-        print ""
-        self.master = mavutil.mavlink_connection(opts.device, baud=opts.baudrate, source_system=opts.SOURCE_SYSTEM,  write=True,  dialect=opts.dialect,  notimestamps=opts.notimestamps)
-
+        self.reopenDevice(opts.device)
+        
         #open log file for data logging
         if opts.logfile_raw!="":
             self.master.logfile_raw=open(opts.logfile_raw,  'w',  0)
@@ -76,12 +73,20 @@ class MAVlinkReceiver:
         self.requestAllStreams()
 
     def reopenDevice(self, device):
-        print ""
-        print "Initialising as system ",   self.opts.SOURCE_SYSTEM,  "on device",  self.opts.device,  "(baud=",  self.opts.baudrate,  ")"
-        print "with MAVlink dialect '",  self.opts.dialect, "'"
-        print ""
-        self.master = mavutil.mavlink_connection(device, baud=self.opts.baudrate, source_system=self.opts.SOURCE_SYSTEM,  write=True,  dialect=self.opts.dialect,  notimestamps=self.opts.notimestamps)
-
+        if self.master is not None:
+            self.master.close()
+            self.master = None
+        try:
+            print ""
+            print "Initialising as system ",   self.opts.SOURCE_SYSTEM,  "on device",  self.opts.device,  "(baud=",  self.opts.baudrate,  ")"
+            print "with MAVlink dialect '",  self.opts.dialect, "'"
+            print ""
+            self.master = mavutil.mavlink_connection(device, baud=self.opts.baudrate, source_system=self.opts.SOURCE_SYSTEM,  write=True,  dialect=self.opts.dialect,  notimestamps=self.opts.notimestamps)
+            self.opts.device = device
+        except:
+            print "Can't open serial device",  device
+            traceback.print_exc()
+            self.master = None
     def requestStream(self,  stream,  active,  frequency=0):
         if self.master==None:
             return
@@ -125,6 +130,7 @@ class MAVlinkReceiver:
         return not self.threading or not self.messageQueue.empty()
 
     def wait_message(self):
+        msg = None
         if self.master==None:
             return "", None
 
@@ -134,8 +140,12 @@ class MAVlinkReceiver:
             except Empty:
                 return "", None;
         else:
-            msg = self.master.recv_msg()
-
+            import serial
+            try:
+                msg = self.master.recv_msg()
+            except serial.SerialException:
+                self.reopenDevice(self.opts.device)
+                print "Serial connection closed."
         # tag message with this instance of the receiver:
         msg_key=""
         if msg!=None and msg.__class__.__name__!="MAVLink_bad_data":
