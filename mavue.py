@@ -79,7 +79,7 @@ class Update_Thread():
             self._treeViewInstance.rootNode.updateContent(key_attribute_list, content=msg)
         
     def update(self):
-        for i in range(0,200):
+        for i in range(0,1):
             if self.mavlinkReceiver.messagesAvailable():
                 msg_key=""
                 if self.mavlinkReceiver.threading:
@@ -251,7 +251,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def openConnection(self,  index):
         if index=="...":
-            filename=QtGui.QFileDialog.getOpenFileName(self, 'Open file', '',  "*.raw")
+            filename=QtGui.QFileDialog.getOpenFileName(self, 'Open file', '',  "RAW log (*.raw);; MAVlink (*.mav)")
             if filename!=None:
                 index=filename
             else:
