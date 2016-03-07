@@ -332,7 +332,7 @@ class ParamSlider(QtGui.QDialog):
         self.slider.setOrientation(QtCore.Qt.Horizontal)
         self.layout.addWidget(self.slider)
         
-        self.target=DropTarget(text="source",  parent=self)
+        self.target=DropTarget(text="source",  parent=self, class_filter="ValueNode")
         self.layout.addWidget(self.target)
         self.scaling=1000
         self.emitChange=True
