@@ -39,6 +39,7 @@ class MAVlinkReceiver:
         self.serialPorts=self.scanForSerials()
         self.threading=threading
         self.severity = ["EMERGENCY",  "ALERT",  "CRITICAL",  "ERROR",  "WARNING",  "NOTICE",  "INFO",  "DEBUG_0",  "DEBUG_1",  "DEBUG_2",  "DEBUG_3"]
+        self.raw_data_outfile=  open ("raw_data_out.csv",  "w")
         
         print "auto-detected serial ports:"
         for s in self.serialPorts:
@@ -176,6 +177,8 @@ class MAVlinkReceiver:
                 self.messages[msg_key]=msg
                 #if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
                 #    return "", None; 
+                if msg.packet_id==msg.packets_per_block-1:
+                    self.raw_data_outfile.write(str(msg.stream_id)+",\t"+str(msg.time_boot_ms)+",\t"+"". join(str(x)+",\t" for x in all_values) +"\n")
 
             if msg.__class__.__name__=="MAVLink_statustext_message":
                 print(self.severity[getattr(msg,  "severity")]+" "+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
