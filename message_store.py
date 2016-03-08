@@ -352,10 +352,10 @@ class ValueNode(RootNode):
     def updateContent(self, content):
         if isinstance(content, list):
             self.trace.append([x for x in content])
-            for i in range(0,len(content)):
-                if not(i in self._children.keys()):
-                    ValueNode(name=i,   parent=self, content=content)
-                self._children[i].updateContent(content[i])
+            #for i in range(0,len(content)):
+            #    if not(i in self._children.keys()):
+            #        ValueNode(name=i,   parent=self, content=content)
+            #    self._children[i].updateContent(content[i])
         else:
             # keep traces of scalar values
             #if isinstance(self._content, int) or isinstance(self._content, float):

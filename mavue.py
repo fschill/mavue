@@ -79,7 +79,11 @@ class Update_Thread():
             self._treeViewInstance.rootNode.updateContent(key_attribute_list, content=msg)
         
     def update(self):
-        for i in range(0,1):
+        start_time = time.time()
+        for i in range(0,1000):
+            if time.time()-start_time>0.05:
+                #print "timeout!",  i
+                break
             if self.mavlinkReceiver.messagesAvailable():
                 msg_key=""
                 if self.mavlinkReceiver.threading:

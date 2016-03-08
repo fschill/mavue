@@ -160,10 +160,13 @@ class MAVlinkReceiver:
                 block_size=len(msg.values)
                 #assemble multi-packet blocks if packets_per_block is greater than 0:
                 if msg.packets_per_block>0:
-                    all_values=[0 for x in range(0, msg.packets_per_block*block_size)]
-
-                    if msg_key in self.messages:
+                    #all_values=[0 for x in range(0, msg.packets_per_block*block_size)]
+                    all_values=[]
+                    
+                    if msg_key in self.messages and len(self.messages[msg_key].values) == (msg.packets_per_block*block_size):
                         all_values=self.messages[msg_key].values
+                    else:
+                        all_values=[0] * ( msg.packets_per_block*block_size)
 
                     for i in range(0, block_size):
                         all_values[i+ msg.packet_id*block_size]=msg.values[i]
