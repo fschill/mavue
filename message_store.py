@@ -292,9 +292,10 @@ class ParamNode(MsgNode):
     def editValue(self, new_value):
         print "change parameter", self._children['param_id'].content(), " to ", new_value
         # self.content().mavlinkReceiver.master.param_set_send(self._children['param_id'].content(),  new_value)
-        self.content().mavlinkReceiver.master.mav.param_set_send(self.content().get_srcSystem(),
-                                                                 self.content().get_srcComponent(),
-                                                                 self._children['param_id'].content(), new_value, 9)
+        for i in range(0, 3):
+            self.content().mavlinkReceiver.master.mav.param_set_send(self.content().get_srcSystem(),
+                                                                     self.content().get_srcComponent(),
+                                                                     self._children['param_id'].content(), new_value, 9)
 
 
 class ValueNode(RootNode):

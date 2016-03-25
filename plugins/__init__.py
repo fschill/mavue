@@ -42,8 +42,8 @@ class plugin_manager():
         
         self.active_plugins=[]#[distance_kalman_filter()]
         self.active_plugins=[google_earth_server.Google_Earth_Server(data_range = self.data_range),  \
-                                        #gps_tool.gps_tool(),  \
-                                        #gps_tool.Named_Value_Scaler() \
+                                        gps_tool.gps_tool(),  \
+                                        gps_tool.Named_Value_Scaler() \
                                         #robotvis.robotvis()\
                                         ]
         if opts.p_debug_elf!="":

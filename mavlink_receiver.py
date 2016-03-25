@@ -179,6 +179,8 @@ class MAVlinkReceiver:
                 #    return "", None; 
                 if msg.packet_id==msg.packets_per_block-1:
                     self.raw_data_outfile.write(str(msg.stream_id)+",\t"+str(msg.time_boot_ms)+",\t"+"". join(str(x)+",\t" for x in all_values) +"\n")
+                else:
+                    return "", None
 
             if msg.__class__.__name__=="MAVLink_statustext_message":
                 print(self.severity[getattr(msg,  "severity")]+" "+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
@@ -200,8 +202,10 @@ if __name__ == '__main__':
         msg_key, msg=rcv.wait_message()
         if msg_key!='':
         #	print msg_key
-        #if msg.__class__.__name__=="MAVLink_global_position_int_message":
-        #    print getattr(msg,  "lon")/10000000.0,  getattr(msg,  "lat")/10000000.0,  getattr(msg,  "alt")/1000.0
+            if msg.__class__.__name__=="MAVLink_statustext_message":
+                print(rcv.severity[getattr(msg,  "severity")]+" "+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
+            #if msg.__class__.__name__=="MAVLink_global_position_int_message":
+            #    print getattr(msg,  "lon")/10000000.0,  getattr(msg,  "lat")/10000000.0,  getattr(msg,  "alt")/1000.0
             if msg.__class__.__name__=="MAVLink_statustext_message" and msg._header.srcComponent==10 and getattr(msg,  "text").startswith("adding task LED"):
                 if rcv.opts.logfile_raw!="":
                     new_log=rcv.opts.logfile_raw + "%04d" % log_counter
