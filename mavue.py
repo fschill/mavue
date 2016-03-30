@@ -47,6 +47,7 @@ import plugins as plugins
 import gui_elements
 
 import plugins.robotvis
+import plugins.spectrogram
 
 colors=[[1.0, 0.0, 0.0],  [0.0,  1.0,  0.0],  [0.0,  0.0,  1.0],  [1.0, 1.0, 0.0],  [0.0,  1.0,  1.0],  [1.0,  0.0,  1.0]]
         
@@ -193,9 +194,13 @@ class MainWindow(QtGui.QMainWindow):
 
         self.add3DButton=QtGui.QPushButton("3D plot")
         self.connect(self.add3DButton,  QtCore.SIGNAL("clicked()"),  self.addPlot6D)
+
+        self.addSpecButton=QtGui.QPushButton("Spectrum")
+        self.connect(self.addSpecButton,  QtCore.SIGNAL("clicked()"),  self.addSpectrogram)
         
         self.widgetbarLayout.addWidget(self.add2DButton)
         self.widgetbarLayout.addWidget(self.add3DButton)
+        self.widgetbarLayout.addWidget(self.addSpecButton)
 
         self.addParamButton=QtGui.QPushButton("param-slider")
         self.connect(self.addParamButton,  QtCore.SIGNAL("clicked()"),  self.addParamSlider)        
@@ -221,6 +226,12 @@ class MainWindow(QtGui.QMainWindow):
         #self.l.addWidget(pw1,  0,  1)
         dock1=DockPlot(title="2D Plot",  parent=self,  widget=pw1)
         #self.addDockWidget(QtCore.Qt.NoDockWidgetArea,  dock1)
+        dock1.show()
+        return dock1
+
+    def addSpectrogram(self):
+        pw1 = plugins.spectrogram.SpectrogramPlot(parent=self, data_range=self.updater.mainDataRange)
+        dock1=DockPlot(title="Spectrogram",  parent=self,  widget=pw1)
         dock1.show()
         return dock1
 

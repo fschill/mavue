@@ -1,7 +1,6 @@
 import plugins
 import solid
 from math import *
-from pymavlink import mavutil
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph.opengl as gl
 import numpy as np
