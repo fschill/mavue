@@ -331,14 +331,14 @@ class ValueNode(RootNode):
                 start = middle
         return start
 
-    def getTrace(self, range=[-100, 0]):
-#        if isinstance(self._content, list):
-#            if range[1]==0:
-#                return self._content
-#            else:
-#                ti=self.findTraceIndex(range[1])
-#                return self.trace[ti]
-#        else:
+    def getTrace(self, range=[-100, 0],  only_1D=True):
+        if only_1D and isinstance(self._content, list):
+            if range[1]==0:
+                return self._content
+            else:
+                ti=self.findTraceIndex(range[1])
+                return self.trace[ti]
+        else:
             if range[1]==0:
                 return self.trace[self.findTraceIndex(range[0]):]
             else:

@@ -61,7 +61,7 @@ class SpectrogramPlot(QtGui.QWidget):
 
     def updatePlot(self):
         if self.source is not None:
-            trace = self.source.getTrace(self.data_range)
+            trace = self.source.getTrace(self.data_range,  only_1D=False)
             data = np.array(trace)
             
 #            signal = np.array(trace[0],  float)
