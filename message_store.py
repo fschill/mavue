@@ -245,6 +245,15 @@ class MsgNode(RootNode):
     def isMessage(self):
         return True
 
+    def get_srcSystem(self):
+        return self._content._header.srcSystem
+
+    def get_srcComponent(self):
+        return self._content._header.srcComponent
+    
+    def get_msgType(self):
+        return self._content._type
+
     def getMavlinkKey(self):
         return "(%i:%i) %s"%(self._content._header.srcSystem,  self._content._header.srcComponent,  self._name)
 

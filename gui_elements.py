@@ -35,7 +35,7 @@ class PlainComboField(QtGui.QComboBox):
         if not value in choices:
             self.choices.append(value)
         for t in choices:
-            self.addItem(QString(t))
+            self.addItem(QString(str(t)))
         if value!=None:
             self.setCurrentIndex(self.choices.index(value))
         self.combo=self

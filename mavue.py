@@ -48,6 +48,7 @@ import gui_elements
 
 import plugins.robotvis
 import plugins.spectrogram
+import plugins.flowchart
 
 colors=[[1.0, 0.0, 0.0],  [0.0,  1.0,  0.0],  [0.0,  0.0,  1.0],  [1.0, 1.0, 0.0],  [0.0,  1.0,  1.0],  [1.0,  0.0,  1.0]]
         
@@ -163,8 +164,11 @@ class MainWindow(QtGui.QMainWindow):
         self.serialSelect=gui_elements.PlainComboField(parent=self,  label='Serial port',  choices=['...','udp:localhost:14550']+[s.device for s in self.serialPorts],  value=self.updater.mavlinkReceiver.opts.device,  onOpenCallback = self.rescanForSerials)
         self.connect(self.serialSelect,  QtCore.SIGNAL("currentIndexChanged(const QString&)"),  self.openConnection)
 
+        self.baudSelect=gui_elements.PlainComboField(parent=self,  label='Baudrate',  choices=[9600, 19200, 38400,  57600,  115200,  512000],  value=self.updater.mavlinkReceiver.opts.baudrate)
+        self.connect(self.baudSelect,  QtCore.SIGNAL("currentIndexChanged(const QString&)"),  self.changeBaudrate)
         
         self.menubarLayout.addWidget(self.serialSelect)
+        self.menubarLayout.addWidget(self.baudSelect)
         self.refreshButton=QtGui.QPushButton("refresh")
         self.menubarLayout.addWidget(self.refreshButton)
         self.connect(self.refreshButton,  QtCore.SIGNAL("clicked()"),  self.updater.mavlinkReceiver.requestAllStreams)
@@ -192,14 +196,17 @@ class MainWindow(QtGui.QMainWindow):
         self.add2DButton=QtGui.QPushButton("2D plot")
         self.connect(self.add2DButton,  QtCore.SIGNAL("clicked()"),  self.addPlot)
 
-        self.add3DButton=QtGui.QPushButton("3D plot")
-        self.connect(self.add3DButton,  QtCore.SIGNAL("clicked()"),  self.addPlot6D)
+        #self.add3DButton=QtGui.QPushButton("3D plot")
+        #self.connect(self.add3DButton,  QtCore.SIGNAL("clicked()"),  self.addPlot6D)
 
+        #self.add3DButton=QtGui.QPushButton("flowchart")
+        #self.connect(self.add3DButton,  QtCore.SIGNAL("clicked()"),  self.addFlowchart)
+        
         self.addSpecButton=QtGui.QPushButton("Spectrum")
         self.connect(self.addSpecButton,  QtCore.SIGNAL("clicked()"),  self.addSpectrogram)
         
         self.widgetbarLayout.addWidget(self.add2DButton)
-        self.widgetbarLayout.addWidget(self.add3DButton)
+        #self.widgetbarLayout.addWidget(self.add3DButton)
         self.widgetbarLayout.addWidget(self.addSpecButton)
 
         self.addParamButton=QtGui.QPushButton("param-slider")
@@ -235,6 +242,13 @@ class MainWindow(QtGui.QMainWindow):
         dock1.show()
         return dock1
 
+    def addFlowchart(self):
+        pw1 = plugins.flowchart.FlowchartWidget(parent=self, data_range=self.updater.mainDataRange)
+        dock1=DockPlot(title="Spectrogram",  parent=self,  widget=pw1)
+        dock1.show()
+        return dock1
+
+
     def addPlot6D(self):
         pw1 = plugins.robotvis.DropPlot6D(parent=self, data_range=self.updater.mainDataRange)
         #self.l.addWidget(pw1,  0,  1)
@@ -266,7 +280,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def openConnection(self,  index):
         if index=="...":
-            filename=QtGui.QFileDialog.getOpenFileName(self, 'Open file', '',  "RAW log (*.raw);; MAVlink (*.mav)")
+            filename=QtGui.QFileDialog.getOpenFileName(self, 'Open file', '',  "MAVlink (*.mav);; RAW log (*.raw)")
             if filename!=None:
                 index=filename
             else:
@@ -281,6 +295,11 @@ class MainWindow(QtGui.QMainWindow):
         print "opening connection"
         print index
         self.updater.mavlinkReceiver.reopenDevice(str(index))
+
+
+    def changeBaudrate(self,  baudrate):
+        print "changing baudrate to ",  baudrate
+        self.updater.mavlinkReceiver.reopenDevice(baudrate=baudrate)
 
 
     def closeEvent(self,  event):

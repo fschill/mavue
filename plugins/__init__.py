@@ -30,6 +30,7 @@ import debugger
 import google_earth_server
 import gps_tool
 import robotvis
+import raw_stream_exporter
 
 class plugin_manager():
     
@@ -43,7 +44,8 @@ class plugin_manager():
         self.active_plugins=[]#[distance_kalman_filter()]
         self.active_plugins=[google_earth_server.Google_Earth_Server(data_range = self.data_range),  \
                                         gps_tool.gps_tool(),  \
-                                        gps_tool.Named_Value_Scaler() \
+                                        gps_tool.Named_Value_Scaler(),  \
+                                        raw_stream_exporter.Raw_Stream_Exporter(),\
                                         #robotvis.robotvis()\
                                         ]
         if opts.p_debug_elf!="":

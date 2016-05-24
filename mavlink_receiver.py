@@ -39,7 +39,6 @@ class MAVlinkReceiver:
         self.serialPorts=self.scanForSerials()
         self.threading=threading
         self.severity = ["EMERGENCY",  "ALERT",  "CRITICAL",  "ERROR",  "WARNING",  "NOTICE",  "INFO",  "DEBUG_0",  "DEBUG_1",  "DEBUG_2",  "DEBUG_3"]
-        self.raw_data_outfile=  open ("raw_data_out.csv",  "w")
         
         print "auto-detected serial ports:"
         for s in self.serialPorts:
@@ -73,17 +72,22 @@ class MAVlinkReceiver:
 
         self.requestAllStreams()
 
-    def reopenDevice(self, device):
+    def reopenDevice(self, device=None,  baudrate=None):
         if self.master is not None:
+            print "closing open connection"
             self.master.close()
             self.master = None
         try:
+            if baudrate is not None:
+                self.opts.baudrate=int(baudrate)
             print ""
+            if device is not None:
+                self.opts.device = device
             print "Initialising as system ",   self.opts.SOURCE_SYSTEM,  "on device",  self.opts.device,  "(baud=",  self.opts.baudrate,  ")"
             print "with MAVlink dialect '",  self.opts.dialect, "'"
             print ""
-            self.master = mavutil.mavlink_connection(device, baud=self.opts.baudrate, source_system=self.opts.SOURCE_SYSTEM,  write=True,  dialect=self.opts.dialect,  notimestamps=self.opts.notimestamps)
-            self.opts.device = device
+            self.master = mavutil.mavlink_connection(self.opts.device, baud=self.opts.baudrate, source_system=self.opts.SOURCE_SYSTEM,  write=True,  dialect=self.opts.dialect,  notimestamps=self.opts.notimestamps)
+            
         except:
             print "Can't open serial device",  device
             traceback.print_exc()
@@ -175,12 +179,8 @@ class MAVlinkReceiver:
                     msg.values=all_values
 
                 self.messages[msg_key]=msg
-                #if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
-                #    return "", None; 
-                if msg.packet_id==msg.packets_per_block-1:
-                    self.raw_data_outfile.write(str(msg.stream_id)+",\t"+str(msg.time_boot_ms)+",\t"+"". join(str(x)+",\t" for x in all_values) +"\n")
-                else:
-                    return "", None
+                if msg.packet_id!=msg.packets_per_block-1: # return empty if message not complete yet
+                    return "", None; 
 
             if msg.__class__.__name__=="MAVLink_statustext_message":
                 print(self.severity[getattr(msg,  "severity")]+" "+str(msg._header.srcSystem)+":"+ str(msg._header.srcComponent)+"): "+getattr(msg,  "text") +"\n")
